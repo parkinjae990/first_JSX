@@ -1,0 +1,218 @@
+/**
+ * 01. 업무구분	: ADM_CLUB_0030_T01
+ * 02. 프로그램명	: 동아리비품관리_동아리비품등록
+ * 03. 화면설명	: 동아리비품관리_동아리비품등록
+ * 04. 작성일		: 2025.07.11
+ * 05. 작성자		: bjw
+ * 06. 작성이력	:
+ * 07. 수정일		: -
+ * 08. 수정이력	: -
+ **************************************************************************************************
+ * 수정일			이름		사유
+ **************************************************************************************************
+ * 
+ **************************************************************************************************
+ */
+
+// =================================================================================================
+// ▶ include 선언부
+// =================================================================================================
+
+// 공통 라이브러리
+include "Lib::comInclude.xjs"
+
+// =================================================================================================
+// ▶ 폼 전역변수 선언부
+// =================================================================================================
+this.lv_parentObj = this.gfn_getParentForm();
+
+// =================================================================================================
+// ▶ Form Event Handler
+// =================================================================================================
+
+this.form_onload = function (obj:Form, e:nexacro.LoadEventInfo)
+{
+	// Form Load 시 공통 기능 처리
+	this.gfn_formOnLoad(obj);
+		
+	// 코드세팅
+	//this.fn_setCode();
+};
+
+// =================================================================================================
+// ▶ 공통버튼 Event Handler
+// =================================================================================================
+
+/**
+ * 검색 처리
+ * @return
+ */
+this.fn_search = function(flag)
+{
+// 대문자 GFN >> 공통함수 의미함
+	if(GFN.isNull(this.div_search.form.cal_maeipdate.value)){ // 단일 캘린더의 이름 
+		return this.gfn_alertMsg("매입일자를 입력하세요.");
+	}
+	
+	this.gfn_confirmSave(this.ds_list, function() {
+		var oData = {
+			svcid : "selectList",
+			svcList : [
+				{
+				// 코드로 쿼리를 불러온다. ->DB나 시스템에서 쿼리를 통해 데이터를 검색하거나 가져오는 행위를 의미함 
+					action	  : ComService.$.SEARCH,  // 코드로 쿼리를 불러올 때 입력함
+					nameSpace : "AdmClub0030T01Mapper",
+					sqlId	  : "selectList",
+					inds      : "ds_in",
+					outds	  : "ds_list",
+				}
+			]
+		};
+		this.doAction(oData).then(function(form, e) {
+			form.gfn_goSavePos(form.ds_list);			
+			//trace(form.ds_list.saveXML());
+			var v_cnt = form.ds_list.rowcount;
+			form.div_resize20_00.form.sta_Cnt.set_text("총 "+ v_cnt +"건");
+			if(v_cnt < 1 && flag != "d"){
+				form.gfn_alertMsg("해당 검색조건에 맞는 데이터가 존재하지 않습니다.");
+				return;
+			}
+		});
+	});
+};
+
+this.fn_insert = function(){
+	if(GFN.isNull(this.div_search.form.cal_maeipdate.value)){
+		return this.gfn_alertMsg("매입일자를 입력하세요.");
+	}
+
+	var nRow = this.ds_list.addRow();
+	
+	this.ds_list.setColumn(nRow, "maeipdate", this.div_search.form.cal_maeipdate.value);	
+}
+
+/**
+ * 저장 유효성 검사
+ */
+this.fn_saveCheck = function () {
+	//마감여부 체크 시 마감일시 검사
+	var validationMappings = {
+	"xcomp" : this.ds_list, //DataSet
+		"maeipdate" : { //매입일자
+			"required" : {
+				colNm : "매입일자"
+			}
+		},
+		"qty" : { 		//수량
+			"required" : {
+				colNm : "수량"
+			}
+		},	
+		"userid" : { 	//등록자사번
+			"required" : {
+				colNm : "등록자사번"
+			}
+		},	
+	};
+	return this.gfn_validation(this, validationMappings);
+};
+/**
+ * 저장 처리
+ * @return
+ */
+this.fn_save = function () {	
+	if (!this.fn_saveCheck()) {
+ 		return;
+ 	}
+
+	this.gfn_saveRow(this.ds_list, function (oData) {
+		oData.sController = ComService.$.CONTROLLER;
+		oData.svcList = [
+			{
+				action	  : ComService.$.SAVE,
+				nameSpace : "AdmClub0030T01Mapper",
+				sqlId	  : ["insert", "update", ""],
+				inds	  : "ds_list:U",
+			}
+		];	
+		ComService.doAction(this, oData).then(function(form, e) {
+			form.gfn_alertMsg("저장완료");
+			form.fn_search();
+		});	
+	});
+};
+
+/**
+* 삭제 처리
+* @return
+*/
+this.fn_delete = function()
+{
+	this.gfn_deleteRow(this.ds_list, function (oData){
+		oData.sController = ComService.$.CONTROLLER;	
+		oData.svcList = [
+				{
+					action	  : ComService.$.DELETE,
+					nameSpace : "AdmClub0030T01Mapper",
+					sqlId	  : "delete",
+					inds	  : "ds_list:U",
+				}
+		];
+			
+		ComService.doAction(this, oData).then(function(form, e) {
+			form.gfn_alertMsg("삭제완료");
+			form.fn_search("d");
+		});
+	});
+};
+
+// =================================================================================================
+// ▶ 사용자 정의 Function
+// =================================================================================================
+
+//엑셀양식
+this.btn_exportexcelGuid_onclick = function(obj:nexacro.Button,e:nexacro.ClickEventInfo)
+{
+	this.gfn_exportExcel(this, this.grd_import, this.gfn_getProgramTitle());
+};
+//엑셀업로드
+this.btn_importExcel_onclick = function(obj:nexacro.Button,e:nexacro.ClickEventInfo)
+{
+	var sSheet = "head=Sheet1!A1:ZZZ1;body=Sheet1!A2;";
+	this.gfn_importExcelByMappings(this, this.ds_excel, [
+		"maeipdate", "goods", "danga", "qty", "danwi", "amt", "bigo", "clubcode", "userid"
+	], true, sSheet, function () {
+				
+		for(var i = 0; i < this.ds_excel.rowcount; i++){		
+			var vMaeipdate  = this.ds_excel.getColumn(i, "maeipdate");
+			var vGoods = this.ds_excel.getColumn(i, "goods");
+			var vDanga = this.ds_excel.getColumn(i, "danga");
+			var vQty  = this.ds_excel.getColumn(i, "qty");		
+			var vDanwi  = this.ds_excel.getColumn(i, "danwi");
+			var vAmt  = this.ds_excel.getColumn(i, "amt");
+			var vBigo  = this.ds_excel.getColumn(i, "bigo");
+			var vClubcode  = this.ds_excel.getColumn(i, "clubcode");
+			var vUserid  = this.ds_excel.getColumn(i, "userid");
+						
+			this.ds_list.set_enableevent(false);
+			var nRow = this.ds_list.addRow();
+			
+			this.ds_list.setColumn(nRow, "maeipdate", vMaeipdate);
+			this.ds_list.setColumn(nRow, "goods", vGoods);
+			this.ds_list.setColumn(nRow, "danga", vDanga);			
+			this.ds_list.setColumn(nRow, "qty", vQty);			
+			this.ds_list.setColumn(nRow, "danwi", vDanwi);				
+			this.ds_list.setColumn(nRow, "amt", vAmt);			
+			this.ds_list.setColumn(nRow, "bigo", vBigo);			
+			this.ds_list.setColumn(nRow, "clubcode", vClubcode);
+			this.ds_list.setColumn(nRow, "userid", vUserid);
+			this.ds_list.setColumn(nRow, "excelGbn", "Y");	//엑셀업로드 구분
+			
+			this.ds_list.set_enableevent(true);
+		}
+		
+		this.gfn_alertMsg("작업이 정상적으로 완료되었습니다.");
+	});
+};
+
+
