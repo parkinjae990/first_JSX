@@ -1,0 +1,46 @@
+ds_gubun 
+
+cd nm 
+columns
+1 → 동문  
+2 → 교사  
+3 → 학생  
+4 → 직원  
+5 → 가족
+
+rows
+
+
+
+2.ds_list
+gubun이 존재 
+
+
+grid에 바인딩 후 더블 클릭하여 properties 들어간 후 
+bind:gubun으로 바인딩 되어 있는 셀 클릭 후 
+expr을 통해 gubun의 값을 바탕으로 값에 따른 text를 보여준다. 
+
+
+2가지의 방식이 존재 
+
+1. 삼항연산자 사용 
+expr: (dataset.getColumn(rowposition, "gubun") == '1') ? '동문' :
+      (dataset.getColumn(rowposition, "gubun") == '2') ? '교사' :
+      (dataset.getColumn(rowposition, "gubun") == '3') ? '학생' :
+      (dataset.getColumn(rowposition, "gubun") == '4') ? '직원' :
+      (dataset.getColumn(rowposition, "gubun") == '5') ? '가족' : ''
+
+
+2. lookup 사용 
+
+Dataset.lookup( keyColumn, keyValue, returnColumn )
+-> keyColumn : 찾을 기준 컬럼명   
+-> keyValue : 찾을 값
+returnColumn : 찾았을 때 반환할 컬럼명
+
+
+expr: ds_gubun.lookup("cd", dataset.getColumn(rowposition, "gubun"), "nm")
+
+keyColumn : cd
+keyValue : dataset.getColumn(rowposition, "gubun")
+returnColumn : nm
