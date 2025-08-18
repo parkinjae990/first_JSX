@@ -121,18 +121,18 @@ this.fn_saveCheck = function () {
  * @return
  */
 this.fn_save = function () {	
-	if (!this.fn_saveCheck()) {
+	if (!this.fn_saveCheck()) { // fn_saveCheck >> 유효성 검사 
  		return;
  	}
 
 	this.gfn_saveRow(this.ds_list, function (oData) {
-		oData.sController = ComService.$.CONTROLLER;
+		oData.sController = ComService.$.CONTROLLER; // ComService 내부에 정의된 controller를 변수에 할당
 		oData.svcList = [
 			{
 				action	  : ComService.$.SAVE,
 				nameSpace : "AdmClub0030T01Mapper",
 				sqlId	  : ["insert", "update", ""],
-				inds	  : "ds_list:U",
+				inds	  : "ds_list:U", // 갱신된 정보만을 서버로 전달
 			}
 		];	
 		ComService.doAction(this, oData).then(function(form, e) {

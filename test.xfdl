@@ -1,0 +1,52 @@
+// CRUD 
+// 저장처리 
+// 1. 유효성 검사  fn_saveCheck
+// 2. 저장 코드 작성 
+
+
+this.fn_saveCheck = funnction(){
+  // 저장 유효성 평가   > 매입일자, 수량, 등록자사번 이 반드시 요구 
+  //required 사용
+    
+  "xcomp" : this.ds_list, // DataSet 설정 
+  "maeipdate" : {
+    "required":{
+        colNm: "매입일자"
+    },
+  },
+  "qty" : {
+    "required": {
+        colNm : "수량"
+    }
+  },
+  "user_id": {
+    "required" : {
+        colNm:"등록자 사번 "
+    }
+  }
+
+};
+
+this.fn_save = function () {	
+	if (!this.fn_saveCheck()) { // fn_saveCheck >> 유효성 검사 
+ 		return;
+ 	}
+
+	this.gfn_saveRow(this.ds_list, function (oData) {
+		oData.sController = ComService.$.CONTROLLER; // ComService 내부에 정의된 controller를 변수에 할당
+		oData.svcList = [
+			{
+				action	  : ComService.$.SAVE, // 실행할 동작이, SAVE이며, 데이터를 저장하기 위한 메타 정보로 활용 
+				nameSpace : "AdmClub0030T01Mapper",
+				sqlId	  : ["insert", "update", ""],
+				inds	  : "ds_list:U",
+			}
+		];	
+		ComService.doAction(this, oData).then(function(form, e) {
+			form.gfn_alertMsg("저장완료");
+			form.fn_search();
+		});	
+	});
+};
+
+
