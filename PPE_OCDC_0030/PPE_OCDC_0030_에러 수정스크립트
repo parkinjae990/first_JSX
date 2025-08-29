@@ -1,0 +1,240 @@
+/**
+ * 01. 업무구분	: PPE_OCDC_0040_M00
+ * 02. 프로그램명	: 예약내역조회
+ * 03. 화면설명	: 예약내역조회
+ * 04. 작성일		: 2025-08-20
+ * 05. 작성자		: pij
+ * 06. 작성이력	:
+ * 07. 수정일		: -
+ * 08. 수정이력	: -
+ **************************************************************************************************
+ * 수정일			이름		사유
+ **************************************************************************************************
+ *
+ **************************************************************************************************
+ */
+
+// =================================================================================================
+// ▶ include 선언부
+// =================================================================================================
+
+// 공통 라이브러리
+
+include "Lib::comInclude.xjs"
+
+
+// =================================================================================================
+// ▶ 폼 전역변수 선언부
+// =================================================================================================
+
+// =================================================================================================
+// ▶ Form Event Handler
+// =================================================================================================
+this.form_onload = function (obj:Form, e:nexacro.LoadEventInfo)
+{
+	// Form Load 시 공통 기능 처리
+	this.gfn_formOnLoad(obj);
+
+}
+
+
+// =================================================================================================
+// ▶ 공통버튼 Event Handler
+// =================================================================================================
+this.fn_search = function ()
+{
+	if(GFN.isNull(this.div_search.form.edt_phone.value)){
+		this.div_search.form.edt_phone.setFocus();
+		this.gfn_alertMsg("휴대전화은(는) 필수항목입니다.");
+				
+		return;
+				
+	}else if(GFN.isNull(this.div_search.form.edt_irum.value)){
+		this.div_search.form.edt_irum.setFocus();
+		this.gfn_alertMsg("이름은(는) 필수항목입니다.");
+		
+		return ;
+	}
+
+		var oData = {
+			svcid : "selectList",
+			svcList : [
+				{
+					action	  : ComService.$.SEARCH,
+					nameSpace : "PpeOcdc0030Mapper",
+					sqlId	  : "selectList",
+					inds      : "ds_in",
+					outds	  : "ds_list",
+				}
+			]
+		};
+		this.doAction(oData).then(function(form, e) {
+			var v_cnt = form.ds_list.rowcount;
+			form.div_resize.form.sta_Cnt.set_text("총 "+ v_cnt +"건");
+			
+			trace(form.div_resize20.form.cmb_state.value);
+			
+			if(v_cnt < 1){
+				form.gfn_alertMsg("해당 검색조건에 맞는 데이터가 존재하지 않습니다.");
+				return;
+			}
+		});
+};
+
+/**
+ * 저장 처리
+ * @return
+ */
+this.fn_save = function (state) {
+	this.ds_list.setColumn(this.ds_list.rowposition,"state",state);
+	this.gfn_saveRow(this.ds_list, function (oData) { // grid를 선택할 수 있지만 rowCount를 가져오지 못하기에, ds_list를 생성
+		oData.sController = ComService.$.CONTROLLER;
+		oData.svcList = [
+			{
+				action	  : ComService.$.SAVE,
+				nameSpace : "PpeOcdc0030Mapper",
+				sqlId	  : ["insert", "update", ""],
+				inds	  : "ds_list:U",
+				//args	  : ["state=" + state],
+			}
+		];	
+		ComService.doAction(this, oData).then(function(form, e) {
+			//저장 시 하단에 저장표시
+			form.gfn_setStatus("save");
+			form.gfn_alertMsg("정상적으로 저장되었습니다.");
+			form.div_resize20.form.cmb_state.set_value(state);
+			
+			form.fn_search();
+			
+		});
+	});
+};
+
+
+	
+//코드재정의(17.01.23)
+
+// 0	예약취소
+// 1	입금대기중
+// 2	입금완료
+// 3	예약취소신청
+// 4	환불신청
+// 5	환불완료
+
+
+// =================================================================================================
+// ▶ 사용자 정의 Function
+// =================================================================================================
+
+// Row의 선택이 변경되어, DataSet의 속성값이 변경된 후 발생하는 이벤트 
+this.ds_list_onrowposchanged = function(obj:nexacro.NormalDataset,e:nexacro.DSRowPosChangeEventInfo)
+{
+		
+	this.div_refund.set_visible(false);
+	this.div_cancel.set_visible(false);
+	// 상태에 따른 div를 보여주기위해 값을 받아옴 
+	var strState = this.ds_list.getColumn(this.ds_list.rowposition,"state");
+	
+	
+	if(strState == 0 ||  strState == 1 || strState == 3){
+		this.div_resize20.form.btn_change.set_text("예약 취소");
+	}else if (strState == 2 || strState == 4 || strState == 5){
+		this.div_resize20.form.btn_change.set_text("환불 신청")
+	}
+	if(!this.gfn_isUpdateColumn(this.ds_list, this.ds_list.rowposition, "state")){
+		if(strState == 0 || strState == 3) 							//취소신청
+		{
+			this.div_cancel.set_visible(true); 						// 취소 div true값을 통해 보이게 설정
+			this.div_resize20.form.btn_change.set_text("예약 취소");	// 버튼을 예약 취소로 설정 
+		}
+		else if(strState == 4 || strState == 5) 					//환불신청
+		{
+			this.div_refund.set_visible(true);    					// 환불 div에 true 값을 통해 보이게 설정함 
+			this.div_resize20.form.btn_change.set_text("환불 신청"); 				// 버튼을 환불 신청으로 설정
+		}
+	}
+};
+
+
+// 상단 취소 및 환불신청 버튼
+// 0	예약취소
+// 1	입금대기중
+// 2	입금완료
+// 3	예약취소신청
+// 4	환불신청
+// 5	환불완료
+this.div_resize20_btn_change_onclick = function(obj:nexacro.Static,e:nexacro.ClickEventInfo)
+{
+
+	this.div_cancel.form.cal_cancelDate.set_value(GFN.getToday());
+		this.div_refund.form.cal_hbDate.set_value(GFN.getToday());
+		
+	var strState = this.ds_list.getColumn(this.ds_list.rowposition,"state");
+		
+	if(this.ds_list.rowcount <= 0) 
+	{ 
+		this.gfn_alertMsg('조회 후 이용가능합니다.');
+		return;
+	}
+	// 오늘 일자를 지나고 취소 신청이 불가능함 
+	if(this.ds_list.getColumn(this.ds_list.rowposition,"eterm") <= GFN.getToday())
+	{
+		this.gfn_alertMsg('취소 신청을 할 수 없습니다.');
+		return;
+	}
+		if(strState == 0 && strState == 3 && strState == 4 && strState == 5) // 예약취소, 예약취소신청, 환불신청, 환불완료 
+	{
+		this.gfn_alertMsg('이미 신청 하였습니다.');
+		return;
+	}
+	else if(strState == 1) //입금중
+	{
+		this.div_cancel.set_visible(true);
+		//this.div_cancel.form.btn_cancel.set_visible(true);
+	}
+	else if(strState == 2) //입금완료
+	{	
+		this.div_refund.form.edt_hbamt.set_value(this.ds_list.getColumn(this.ds_list.rowposition,"total")); 		
+		this.div_refund.set_visible(true);
+	}
+
+};
+
+// 예약 취소 버튼
+this.btn_cancel_onclick = function(obj:nexacro.Button,e:nexacro.ClickEventInfo)
+{	
+	var SSayu = this.div_cancel.form.edt_cancelSayu.value;
+//	this.ds_list.setColumn(this.ds_list.rowposition,"state",'3');
+	
+	if(GFN.isNull(SSayu))
+	{	
+		// 취소 사유
+		this.div_cancel.form.edt_cancelSayu.setFocus();
+		return ;
+	}else{
+		this.gfn_confirmMsg("예약 취소 신청을 계속 하시겠습니까?",function(){
+			this.fn_save(3);
+			return;
+		});
+	}
+}
+
+
+// 핸드폰에 onKeyup설정
+this.div_search_edt_phone_onkeyup = function(obj:nexacro.Edit,e:nexacro.KeyEventInfo)
+{
+		if(e.keycode == 13)
+	{
+		this.fn_search();
+	}
+};
+
+// 이름에 onKeyup설정
+this.div_Search_edt_name_onkeyup = function(obj:Edit, e:nexacro.KeyEventInfo)
+{
+	if(e.keycode == 13)
+	{
+		this.fn_search();
+	}
+}
+

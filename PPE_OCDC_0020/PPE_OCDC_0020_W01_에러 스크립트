@@ -1,0 +1,129 @@
+
+/**
+ * 01. 업무구분	: PPE_OCDC_0020_W01
+ * 02. 프로그램명	: 객실예약신청
+ * 03. 화면설명	: 객실예약신청
+ * 04. 작성일		: 2025-08-20
+ * 05. 작성자		: pij
+ * 06. 작성이력	:
+ * 07. 수정일		: -  
+ * 08. 수정이력	: -
+ **************************************************************************************************
+ * 수정일			이름		사유
+ **************************************************************************************************
+ * 
+ **************************************************************************************************
+ */
+
+// =================================================================================================
+// ▶ include 선언부
+// =================================================================================================
+// 공통 라이브러리
+include "Lib::comInclude.xjs"
+// =================================================================================================
+// ▶ 폼 전역변수 선언부
+// =================================================================================================
+
+// =================================================================================================
+// ▶ Form Event Handler
+// =================================================================================================
+this.form_onload = function (obj:Form, e:nexacro.LoadEventInfo)
+{
+	// Form Load 시 공통 기능 처리
+	this.gfn_formOnLoad(obj);
+	
+	this.fn_init();
+};
+// =================================================================================================
+// ▶ 공통버튼 Event Handler
+// =================================================================================================
+this.fn_init= function(){
+	this.fn_preview();
+}
+
+
+this.fn_preview  = function(width , height , isCallback , strBussFg)
+{
+	if( isCallback == "" ) isCallback = true;
+
+	this.width = width;
+	this.height = height;
+	this.isCallback = isCallback;
+
+	this.ds_in.setColumn(0, "bussFg", strBussFg); // (O) 올바른 코드
+
+	this.setSize(this.width , this.height);
+	this.fn_search();
+}
+
+this.fn_search = function ()
+{
+
+			var oData = {
+			svcid : "selectList",
+			svcList : [
+				{
+					action	  : ComService.$.SEARCH,
+					nameSpace : "PpeOcdc0020Mapper",
+					sqlId	  : "selectAn",
+					inds      : "ds_in",
+					outds	  : "ds_contents",
+				}
+			]
+		};
+		this.doAction(oData).then(function(form, e) {
+			var v_cnt = form.ds_contents.rowcount;
+
+			/*this.  의 범위 문제로 인해서 getColumn을 찾지 못하는 에러가 발생함 따라서, 
+			*/
+			var sContents = form.ds_contents.getColumn(0,"cont");
+	
+			if(v_cnt < 1){
+				form.gfn_alertMsg("해당 검색조건에 맞는 데이터가 존재하지 않습니다.");
+				return;
+			}
+		});
+	//});
+};
+
+// =================================================================================================
+// ▶ 사용자 정의 Function
+// =================================================================================================
+
+
+// 웹페이지가 로딩 되었을 때, 발생하는 이벤트 
+this.web_preview_onloadcompleted = function(obj:WebBrowser, e:nexacro.WebLoadCompEventInfo)
+{
+	
+	if ( e.url == this.previewUrl )
+	{
+		var content = this.getOwnerFrame().content;
+					
+		//this.alert(this.buss_fg );
+		this.ds_in.setColumn(0,	"bussFg",	this.ds_in.bussFg );
+		
+		// fn_search 실행 
+		this.fn_search();
+		
+	}
+}
+
+// WebBrowser에 로드된 웹페이지에서 넥사크로로 정보를 전달시 발생하는 이벤트 
+this.web_preview_onusernotify = function(obj:WebBrowser, e:nexacro.WebTitleChangeEventInfo)
+{
+	if ( e.userdata == "loadContent" )
+	{
+		var w = obj.getProperty("document").getProperty("body").getProperty("offsetWidth");		
+		var h = obj.getProperty("document").getProperty("body").getProperty("offsetHeight");
+		
+		if ( w > this.web_preview.getOffsetWidth() || h > this.web_preview.getOffsetHeight() )
+		{ 
+			//this.web_preview.resize(w, h);
+			//this.resetScroll();
+		}
+	}
+}
+
+
+
+넥사크로 PPE_OCDC_0020_W01의 경우에는 wysiwyg을 사용해서 WebBrowser를 만들었다.
