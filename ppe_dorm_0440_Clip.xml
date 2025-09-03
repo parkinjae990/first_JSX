@@ -1,0 +1,57 @@
+<!-- 논리적 오류로 인해 생성한 코드 내용 -->
+
+
+SQL =       "    SELECT C.PHOTO AS PIC "
+SQL = SQL + "         , A.DONG " 
+SQL = SQL + "         , A.SIL||'/'||A.SIL2 AS SIL "
+SQL = SQL + "         , B.IRUM "
+SQL = SQL + "         , A.HAKBUN "         
+SQL = SQL + "      FROM EAGLE.DOMASTER A "
+SQL = SQL + "         , EAGLE.SHJHAKJM B "
+SQL = SQL + "         , EAGLE.SHJPHOTM C "
+SQL = SQL + "     WHERE 1=1 "
+SQL = SQL + "       AND A.HAKBUN  = B.HAKBUN "             
+SQL = SQL + "       AND A.HAKBUN  = C.HAKBUN(+) "       
+SQL = SQL + "       AND A.STATE BETWEEN '1' AND '6' "
+       
+SQL = SQL + "       AND A.YEONDO = '{Parameter.YEONDO}' "
+SQL = SQL + "       AND A.HAKGI  ='{Parameter.HAKGI}' "
+
+if('{parameter.DONG}' != '')
+{
+SQL = SQL +"	   AND A.DONG   = '{parameter.DONG}'  OR '{parameter.DONG}' = '- 전 체 -' ";
+}     
+
+     
+SQL = SQL + "	 ORDER BY A.DONG, TO_NUMBER(A.SIL), A.SIL2"
+
+
+return SQL;
+
+
+<!-- 수정한 코드 내용 -->
+SQL =       "    SELECT C.PHOTO AS PIC "
+SQL = SQL + "         , A.DONG " 
+SQL = SQL + "         , A.SIL||'/'||A.SIL2 AS SIL "
+SQL = SQL + "         , B.IRUM "
+SQL = SQL + "         , A.HAKBUN "         
+SQL = SQL + "      FROM EAGLE.DOMASTER A "
+SQL = SQL + "         , EAGLE.SHJHAKJM B "
+SQL = SQL + "         , EAGLE.SHJPHOTM C "
+SQL = SQL + "     WHERE 1=1 "
+SQL = SQL + "       AND A.HAKBUN  = B.HAKBUN "             
+SQL = SQL + "       AND A.HAKBUN  = C.HAKBUN(+) "       
+SQL = SQL + "       AND A.STATE BETWEEN '1' AND '6' "
+       
+SQL = SQL + "       AND A.YEONDO = '{Parameter.YEONDO}' "
+SQL = SQL + "       AND A.HAKGI  ='{Parameter.HAKGI}' "
+
+if('{parameter.DONG}' != '')
+{
+SQL = SQL +"	   AND A.DONG   = '{parameter.DONG}'  OR '{parameter.DONG}' = '- 전 체 -' ";
+}     
+   
+SQL = SQL + "	 ORDER BY A.DONG, TO_NUMBER(A.SIL), A.SIL2"
+
+
+return SQL;
