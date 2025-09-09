@@ -1,0 +1,512 @@
+/**
+ * 01. 업무구분	: PPE_OCDC_0100_M00
+ * 02. 프로그램명	: 입금승인자 객실배정
+ * 03. 화면설명	: 입금승인자 객실배정
+ * 04. 작성일		: 2025-08-21
+ * 05. 작성자		: pij
+ * 06. 작성이력	:
+ * 07. 수정일		: -
+ * 08. 수정이력	: -
+ **************************************************************************************************
+ * 수정일			이름		사유
+ **************************************************************************************************
+ *
+ **************************************************************************************************
+ */
+
+// =================================================================================================
+// ▶ include 선언부
+// =================================================================================================
+
+// 공통 라이브러리
+include "Lib::comInclude.xjs"
+// =================================================================================================
+// ▶ 폼 전역변수 선언부
+// =================================================================================================
+
+// =================================================================================================
+// ▶ Form Event Handler
+// =================================================================================================
+this.form_onload = function (obj:Form, e:nexacro.LoadEventInfo)
+{
+	// Form Load 시 공통 기능 처리
+	this.gfn_formOnLoad(obj, "P");
+
+	this.fn_init();
+	this.fn_search();
+	
+	trace("this.rdo_type.value의 값 " + this.rdo_type.value)
+};
+
+this.fn_init = function ()
+{
+	this.cal_startdt.set_value(GFN.getToday());
+	this.fn_setEndDate();
+	this.spn_inwon.set_value(5);
+	this.fn_search();
+	
+	// 부모창에서 전달한 파라미터 받기
+	var sIrum = this.parent.irum;
+	var sBirth = this.parent.birth;
+	var sGubun = this.parent.gubun;
+	var sUserId = UserSession.$.loginId; // 여기 다시 검토해야함
+	this.rdo_type.set_value("A");
+	
+	// 팝업창의 데이터셋(ds_in)에 값 설정
+	this.ds_in.setColumn(0,"roomType", this.rdo_type.value);
+	this.ds_in.setColumn(0, "irum", sIrum);
+	this.ds_in.setColumn(0, "birth", sBirth);
+	this.ds_in.setColumn(0, "gubun", sGubun);
+	this.ds_in.setColumn(0,"userId", sUserId)
+};
+
+this.fn_setEndDate = function ()
+{
+	// 1. 오늘 일자 가져옴 
+	var sToday = GFN.getToday();
+		
+	// 2. 가져온 날짜 문자열을 기반으로 Date 객체를 생성.
+	var year = parseInt(sToday.substr(0, 4));
+	var month = parseInt(sToday.substr(4, 2)) - 1;
+	var day = parseInt(sToday.substr(6, 2));
+	var objDate = new Date(year, month, day);
+
+	// 3. 생성된 Date 객체에 하루 추가 
+	objDate.setDate(objDate.getDate() + 1);
+
+	// 4. 다음 날짜를 "YYYYMMDD" 형식의 문자열로 변환.
+	// getMonth()는 0부터 반환하므로 +1 적용, padLeft를 사용해 월과 일이 항상 두 자리가 되도록 설정
+	var nextYear = objDate.getFullYear();
+	var nextMonth = (objDate.getMonth() + 1).toString().padLeft(2, "0"); // 2자리 제한 1자리일 경우 앞에 0 추가
+	var nextDay = objDate.getDate().toString().padLeft(2, "0");
+	var sTomorrow = nextYear + nextMonth + nextDay;
+
+	// 5. 종료일을 계산된 내일 날짜로 설정.
+	this.cal_enddt.set_value(sTomorrow);
+	
+	return sTomorrow;
+	
+};
+
+// =================================================================================================
+// ▶ 공통버튼 Event Handler
+// =================================================================================================
+
+/**
+ * 검색 처리
+ * @return
+ */
+this.fn_search = function ()
+{
+	var oData = {
+		svcid : "selectList",
+		svcList : [
+			{
+				action	  : ComService.$.SEARCH,
+				nameSpace : "PpeOcdc0020T01Mapper",
+				sqlId	  : "selectList",
+				inds      : "ds_in",
+				outds	  : "ds_list",
+			}
+		]
+	};
+	this.doAction(oData).then(function(form, e) {
+			//trace(form.ds_list.saveXML());		// ds_list 구조를 htmml로 확인할 수 있음 
+			var v_cnt = form.ds_list.rowcount;
+			form.sta_Cnt.set_text("총 "+ v_cnt +"건");
+			if(v_cnt < 1){
+				form.gfn_alertMsg("해당 검색조건에 맞는 데이터가 존재하지 않습니다.");
+				return;
+			}
+		});
+	
+};
+
+
+/**
+ * 신규 처리
+ * @return
+ */
+
+this.fn_insert= function(obj:nexacro.Button,e:nexacro.ClickEventInfo)
+{
+	trace("fn_insert 실행 ")
+	if(this.fn_validateCheck() != false){
+		this.fn_search()
+		this.gfn_confirmMsg("객실 예약 신청을 합니다. \n 계속 하시겠습니까?", function (){
+				//insert에 넣을 데이터셋 세팅 
+				this.fn_setDs_in();
+				var oData = {
+					sController : ComService.$.CONTROLLER,
+					svcid : "insert",
+					svcList : [
+						{
+							action	  :  ComService.$.INSERT_SINGLE,
+							nameSpace : "PpeOcdc0020T01Mapper",
+							sqlId	  : "insert",
+							inds      : "ds_in",
+						}
+					]
+				};
+				this.doAction(oData).then(function(form, e) {
+				
+						form.gfn_alertMsg('정상적으로 신청되었습니다.');
+						form.btn_close_onclick();
+						trace("저장 성공")
+					});		
+				
+			},function(){
+				this.fn_search();
+			});
+			
+	}else{
+		return;
+	}
+}
+
+
+/**
+ * 엑셀다운로드 처리
+ * @return
+ */
+this.fn_excel = function () {
+	this.gfn_exportExcel(this, this.div_resize.form.grd_list, this.gfn_getProgramTitle(), [0]);
+};
+// =================================================================================================
+// ▶ 사용자 정의 Function
+// =================================================================================================
+
+// 데이터셋 세팅 
+this.fn_setDs_in = function()
+{
+		trace("fn_setDs_in 실행")
+	var staDate = this.cal_startdt.value;
+	var endDate   = this.cal_enddt.value;
+	var radioValue = this.rdo_type.value;
+
+	if(this.ds_list != null && this.ds_list.rowcount>0)
+	{	
+		this.ds_list.clearData();		
+	}
+	
+
+	if(this.ds_in.getColumn(0,"staDate") != null)
+	{
+		this.fn_search();
+	
+		var addNum=0;
+		var money=40000; // 기본 요금 
+		
+		//성수기 A형 - 50,000   B형 - 50,000   -> 7월 1일 ~ 8월 31일 (2개월)
+		//비수기 A형 - 40,000   B형 - 40,000
+		//학부생(재학생) -비수기 30,000
+		
+		if(staDate.substr(5,1) == "7" || staDate.substr(5,1) == "8")
+		{
+			money = 50000;
+		} 
+		else if(this.ds_in.getColumn(0,"gubun")==1)
+		{
+			money = 30000;
+		}
+		
+		// GFN.getDiffTime(sStartTime, sEndTime, sType) 두 시간의 차이 계산 
+		this.ds_in.setColumn(0,"num", this.fn_getDiffDay(staDate,endDate));
+		this.edt_total.set_value(((money*this.ds_in.getColumn(0,"roomCount"))+addNum)*this.ds_in.getColumn(0,"num"));
+		this.ds_in.setColumn(0,"total",this.edt_total.value);
+		this.ds_in.setColumn(0,"roomType",this.rdo_type.value);
+	}
+}
+
+// 컬럼의 값이 바뀔 때마다 실행 
+this.ds_in_oncolumnchanged = function(obj:nexacro.NormalDataset,e:nexacro.DSColChangeEventInfo)
+{
+	trace("ds_in_oncolumnchanged 실행")
+	var staDate = this.cal_startdt.value;
+	var endDate   = this.cal_enddt.value;
+	// 객실수, 시작일자, 종료일자 변경시 EVENT
+	if(e.columnid == "roomCount" || e.columnid == "staDate" || e.columnid == "endDate" || e.columnid == "inwonTotal" || e.columnid == "hp") {
+			if((this.ds_in.getColumn(0,"staDate") >= this.ds_in.getColumn(0,"endDate") || this.ds_in.getColumn(0,"endDate") == null) && e.columnid == "staDate")
+		{
+			this.ds_in.setColumn(0,"endDate",this.fn_setEndDate());
+		}
+		
+		
+		if(this.ds_list != null && this.ds_list.rowcount>0)
+		{	
+			this.ds_list.clearData();		
+		}
+			
+	}
+	
+	if(this.ds_in.getColumn(0,"roomCount") != null && this.ds_in.getColumn(0,"inwonTotal") != null)			//가격 설정
+	{
+		var addNum=0;
+		var money=40000;
+		
+		//성수기 A형 - 50,000   B형 - 50,000   -> 7월 1일 ~ 8월 31일 (2개월)
+		//비수기 A형 - 40,000   B형 - 40,000
+		//학부생(재학생) -비수기 30,000
+		
+		if(staDate.substr(5,1) == "7" || staDate.substr(5,1) == "8")
+		{
+			money = 50000;
+		} 
+		else if(this.ds_in.getColumn(0,"gubun")==1)
+		{
+			money = 30000;
+		}
+
+		this.ds_in.setColumn(0,"num", this.fn_getDiffDay(staDate,endDate));
+		this.edt_total.set_value(((money*this.ds_in.getColumn(0,"roomCount"))+addNum)*this.ds_in.getColumn(0,"num"));
+		this.ds_in.setColumn(0,"total",this.edt_total.value);
+	}
+	trace("ds_onCloumn 로직 종료 ")
+};
+
+// 유효성 검사 
+this.fn_validateCheck = function() // state가 1이기에, this.fn_saveCheck 사용 불가
+{
+	trace("fn_validateCheck 실행")
+	var irum= this.edt_irum.value;
+	var roomCount = this.edt_roomCount.value;
+	var staDate = this.cal_startdt.value;
+	var endDate = this.cal_enddt.value;
+	var hp  = this.edt_hp.value;
+	var inwonTotal = this.spn_inwon.value;
+	
+	for(var i = 0; i < this.ds_in.rowcount; i++)
+	{
+		if (GFN.isNull(roomCount)){
+			this.gfn_alertMsg("객실수은(는) 필수 입력항목입니다.",function(){
+					this.edt_roomCount.setFocus();
+					this.fn_search();
+				});
+			return false;
+		}
+		if (GFN.isNull(hp)){
+			this.gfn_alertMsg("휴대전화은(는) 필수 입력항목입니다.",function(){
+					this.edt_hp.setFocus();
+					this.fn_search();
+				});
+			return false;
+		}
+		if (GFN.isNull(inwonTotal)){
+			this.gfn_alertMsg("이용인원은(는) 필수 입력항목입니다.",function(){
+					this.spn_inwon.setFocus();
+					this.fn_search();
+				});
+			return false;
+		}
+	}
+	if (this.fn_inwonPerRoom() == false){
+		return false;
+	}
+	return true; // 모두 null이 이닐시 true 반환 
+	
+}
+
+// 날짜 차이 계산 
+this.fn_getDiffDay = function(sStartDate, sEndDate)
+{
+    // 입력값 유효성 검사 (길이가 8이 아니거나, 비어있을 경우)
+    if (GFN.isNull(sStartDate) || GFN.isNull(sEndDate) || sStartDate.length != 8 || sEndDate.length != 8)
+    {
+        return ; // Not a Number 반환
+    }
+
+    // YYYY, MM, DD로 분리하여 Date 객체 생성
+    // JavaScript에서 월(Month)은 0부터 시작하므로 -1을 적용 
+    var dStartDate = new Date(sStartDate.substring(0, 4), sStartDate.substring(4, 6) - 1, sStartDate.substring(6, 8));
+    var dEndDate   = new Date(sEndDate.substring(0, 4), sEndDate.substring(4, 6) - 1, sEndDate.substring(6, 8));
+
+    // getTime()으로 밀리초 단위 시간차를 구함
+    var nTimeDiff = dEndDate.getTime() - dStartDate.getTime();
+
+    // 밀리초를 일수(Day)로 변환 (1000ms * 60s * 60m * 24h)
+    var nDayDiff = Math.ceil(nTimeDiff / (1000 * 60 * 60 * 24));
+
+    return nDayDiff;
+}
+
+// 인원 수에 따른 방 개수 로직 
+this.fn_inwonPerRoom = function()
+{
+	var maxPeoplePerRoom = 7;  // 객실 1개당 최대 인원
+	var maxRooms = 8;          // roomType별 최대 예약 가능 객실 수
+	
+	// 데이터셋에서 현재 값 가져오기 
+	var inwonTotal = this.ds_in.getColumn(0, "inwonTotal"); // 현재 입력된 총 인원
+	var currentRoomCnt = this.ds_in.getColumn(0, "roomCount"); // 현재 설정된 객실 수
+	
+	// 현재 설정된 객실 수로 수용 가능한 최대 인원을 계산
+	var maxCapacity = currentRoomCnt * maxPeoplePerRoom;
+	
+	// maxRooms보다 더 큰 값일 경우 
+	if(maxRooms < currentRoomCnt){
+		this.gfn_alertMsg("각 타입별 최대 예약 가능 객실 수는 8개 입니다.")
+		return false;
+	}
+	// 입력된 총 인원이 현재 객실의 수용 가능 인원을 초과하는지 확인
+	if (inwonTotal > maxCapacity) {
+		// 변수 설정 :: 총 인원에 필요한 객실 수를 계산(올림 처리). 
+		var requiredRooms = Math.ceil(inwonTotal / maxPeoplePerRoom);
+		
+		// 필요한 객실 수가 최대 예약 가능 객실 수(8개)를 초과하는지 확인
+		if (requiredRooms > maxRooms) {
+			// 최대 수용 인원을 초과했다는 알림을 표시
+			var maxTotalCapacity = maxRooms * maxPeoplePerRoom;
+			this.gfn_alertMsg("총 인원이 최대 이용 가능 인원(" + maxTotalCapacity + "명)을 초과했습니다.");
+			
+			// 인원수를 최대 수용 가능 인원으로, 객실 수를 최대 객실 수로 재설정
+			this.spn_inwon.set_value(maxTotalCapacity);
+			this.ds_in.setColumn(0, "inwonTotal", maxTotalCapacity);
+			this.ds_in.setColumn(0, "roomCount", maxRooms); // 객실 수도 최대로 설정
+			return false;
+		}
+		// 객실을 추가하면 예약이 가능한 경우.
+		else {
+			// 사용자에게 필요한 객실 수를 알려줌.
+			this.gfn_alertMsg(inwonTotal + "명이 이용하려면 최소 " + requiredRooms + "개의 객실이 필요합니다. 객실 수를 조정해주십시오.");
+		
+			return false;
+		}
+	}
+	return true;
+}
+
+// 시작 일자 
+this.cal_startdt_onchanged = function(obj:nexacro.Calendar,e:nexacro.ChangeEventInfo)
+{
+	var staDate = this.cal_startdt.value;
+	var endDate = this.cal_enddt.value;
+	
+	
+	
+	if(staDate < GFN.getToday())
+	{	
+		this.gfn_alertMsg('시작일자를 바르게 선택하십시오.');
+		this.cal_startdt.set_value(GFN.getToday());
+		this.ds_in.setColumn(0,"staDate",this.cal_startdt.value);
+		this.fn_setDs_in();
+		this.fn_search();
+		
+		return;
+	}
+
+	if(staDate >= endDate)
+	{	
+		this.cal_enddt.set_value(this.fn_getNextDay(staDate) ); // 입력한 staDate보다 하루더 많은 값을 데이터로 담아야함 
+		this.ds_in.setColumn(0,"endDate",this.cal_enddt.value);	
+		this.fn_setDs_in();
+		this.fn_search();
+		return;
+		
+	}else{
+		// 종료일자가 시작일자보다 클 때
+		this.cal_startdt.set_value(staDate)
+		this.ds_in.setColumn(0,"staDate",staDate);			
+		this.fn_search();
+	}
+		
+
+	this.ds_in.setColumn(0,"staDate",this.cal_startdt.value);
+	this.ds_in.setColumn(0,"endDate",this.cal_enddt.value);
+	this.fn_setDs_in();
+};
+
+// 종료 일자 
+this.cal_enddt_onchanged = function(obj:nexacro.Calendar,e:nexacro.ChangeEventInfo)
+{
+	var staDate = this.cal_startdt.value;
+	var endDate = this.cal_enddt.value;
+	
+	//시작일자가 오늘날짜보다 이전일때 
+	if(staDate < GFN.getToday())
+	{
+		this.gfn_alertMsg('시작일자를 바르게 선택하십시오.');
+		this.cal_startdt.set_value(GFN.getToday());
+		this.ds_in.setColumn(0,"staDate",this.cal_startdt.value);
+		this.fn_search();
+		return;
+	}	
+	
+	//시작일자가 종료일자보다 클 때
+	if(staDate >= endDate)
+	{
+		this.gfn_alertMsg('종료일자를 바르게 선택하십시오.');
+		this.cal_enddt.set_value(this.fn_setEndDate());
+		this.ds_in.setColumn(0,"endDate",this.cal_enddt.value);			
+		this.fn_search();
+		return;
+	}else{
+	// 종료일자가 시작일자보다 클 때
+		this.cal_enddt.set_value(endDate)
+		this.ds_in.setColumn(0,"endDate",endDate);			
+		this.fn_search();
+	}
+
+	this.ds_in.setColumn(0,"staDate",this.cal_startdt.value);
+	this.ds_in.setColumn(0,"endDate",this.cal_enddt.value);
+	this.fn_setDs_in();
+	
+
+};
+
+// 지정한 날짜의 다음 날 가져오기 
+this.fn_getNextDay = function(sBaseDate)
+{
+    // 입력값 유효성 검사
+    if (GFN.isNull(sBaseDate) || sBaseDate.length != 8)
+    {
+        return ""; 
+    }
+
+    // 1. 기준 날짜 문자열을 기반으로 Date 객체를 생성
+    var year = parseInt(sBaseDate.substr(0, 4));
+    var month = parseInt(sBaseDate.substr(4, 2)) - 1; // 월은 0부터 시작
+    var day = parseInt(sBaseDate.substr(6, 2));
+    var objDate = new Date(year, month, day);
+
+    // 2. 생성된 Date 객체에 하루를 추가
+    objDate.setDate(objDate.getDate() + 1);
+
+    // 3. 다음 날짜를 "YYYYMMDD" 형식의 문자열로 변환
+    var nextYear = objDate.getFullYear();
+    var nextMonth = (objDate.getMonth() + 1).toString().padLeft(2, "0");
+    var nextDay = objDate.getDate().toString().padLeft(2, "0");
+    
+    return nextYear + nextMonth + nextDay;
+}
+
+// 닫기 버튼 
+this.btn_close_onclick = function(obj:nexacro.Button,e:nexacro.ClickEventInfo)
+{
+	var objRtnArr = new Array();
+	objRtnArr[0] = "N";
+	this.close(objRtnArr.toString());	
+
+};
+
+// edit에 입력 후 다른 edit 이동시, 그리드에 조회 결과 보이게 설정 
+
+this.edt_roomCount_onkillfocus = function(obj:nexacro.Edit,e:nexacro.KillFocusEventInfo)
+{
+	trace("1111111111111111111")
+	//if(this.edt_roomCount == null ){
+	this.fn_search();
+	//}
+	
+};
+
+this.edt_hp_onkillfocus = function(obj:nexacro.Edit,e:nexacro.KillFocusEventInfo)
+{
+	trace("2222222222222222222")
+	this.fn_search();
+};
+
+this.spn_inwon_onkillfocus = function(obj:nexacro.Spin,e:nexacro.KillFocusEventInfo)
+{
+	trace("3333333333333333333333")
+	this.fn_search();
+};

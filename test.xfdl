@@ -38,7 +38,7 @@ this.fn_save = function () {
 			{
 				action	  : ComService.$.SAVE, // 실행할 동작이, SAVE이며, 데이터를 저장하기 위한 메타 정보로 활용 
 				nameSpace : "AdmClub0030T01Mapper",
-				sqlId	  : ["insert", "update", ""],
+				sqlId	  : ["insert", "update", ""], // mapper 내부에 id가 insert와 update 두가지 작업을 수행하겠다는 의미 
 				inds	  : "ds_list:U",
 			}
 		];	

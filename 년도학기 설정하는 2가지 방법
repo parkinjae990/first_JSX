@@ -1,0 +1,32 @@
+//1. 조회문 이용 
+
+
+
+// 조회 로직  이용시 코드 
+this.fn_year = function ()
+{
+	var oData = {
+		svcid : "selectYear",
+		svcList : [
+			{
+				action	  : ComService.$.SEARCH,
+				nameSpace : "PpeDorm0360Mapper",
+				sqlId	  : "selectYear",
+				outds	  : "ds_year",
+				args 	  : ["bussFg=DORM_10"]
+			}
+		]
+	};
+	this.doAction(oData).then(function(form, e) {
+		form.div_search.form.spn_year.set_value(form.ds_year.getColumn(0,"year"));
+		form.div_search.form.cmb_hakgi.set_value(form.ds_year.getColumn(0,"hakgi"));
+	});
+};
+
+
+
+// 2. 함수 이용 
+// 함수 이용 
+	this.div_search.form.spn_year.set_value(this.gfn_getOrigSchdulInfo("DORM_10").year); // 학기 년도 세팅
+	
+	this.div_search.form.cmb_hakgi.set_value(this.gfn_getOrigSchdulInfo("DORM_10").hakgi); // 학기세팅
