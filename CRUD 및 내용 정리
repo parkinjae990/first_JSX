@@ -1,0 +1,282 @@
+기본 CRUD (넥사크로 버전)
+
+
+/* 조회 처리 */
+this.fn_search = function()
+{
+	var oData = {
+		svcid : "selectList",
+		svcList : [
+			{
+				action	  : ComService.$.SEARCH,
+				nameSpace : "PpeDorm0370Mapper",   // 실행할 메퍼 
+				sqlId	  : "selectList",
+				outds	  : "ds_list",
+			}
+		]
+	};
+	this.doAction(oData).then(function(form, e) {
+			var v_cnt = form.ds_list.rowcount;
+			form.div_resize.form.sta_Cnt.set_text("총 "+ v_cnt +"건");
+			if(v_cnt < 1){
+				form.gfn_alertMsg("해당 검색조건에 맞는 데이터가 존재하지 않습니다.");
+				return;
+			}
+	});
+}
+
+/*
+* 삽입 처리 
+*/
+this.fn_insert = function(){
+	// 그리드에 바인딩 되어있는 데이터셋의 행을 추가 
+	var	nRow	=	this.ds_list.addRow(); // 행 추가 
+    this.ds_list.setColumn(0, "irum", this.edt_irum.value)  // 0번째 행의 이름 칼럼에 이름 컴포넌트의 값을 추가함
+    this.ds_list.setColumn(0,"addr",this.edt_addr.value)    // 0번째 행의 주소 칼럼에 주소 컴포넌트의 값을 추가함
+    this.ds_list.setColumn(0,"hbtel",this.edt_hbtel.value)  // 0번째 행의 핸드폰 컬럼에 핸드폰 컴포넌트의 값을 추가함
+
+} 
+
+
+/*
+* 저장 유효성 검사
+**rowState가 1이면 저장 유효성 검사를 할 수 없음 
+*/
+this.fn_saveCheck = function () {
+	//마감여부 체크 시 마감일시 검사
+
+	var validationMappings = {
+		"xcomp" : this.ds_list, //DataSet
+		"bulcode" : { //코드번호
+			"required" : {
+				colNm : "코드번호"
+			}
+		},
+		"buljum" : { //차량명
+			"required" : {
+				colNm : "벌점"
+			}
+		},
+		"bulnm" : { //사용가능 좌석수
+			"required" : {
+				colNm : "상,벌점 명칭 "
+			}
+		},
+	};
+	return this.gfn_validation(this, validationMappings);
+};
+
+/**
+* 저장 처리 
+* @return
+*/
+this.fn_save = function () {
+	
+	if (!this.fn_saveCheck()) {
+ 		return;
+ 	}
+// grid를 선택할 수 있지만 rowCount를 가져오지 못하기에, ds_list를 생성
+	this.gfn_saveRow(this.ds_list, function (oData) { 
+		oData.sController = ComService.$.CONTROLLER;
+		oData.svcList = [
+			{
+				action	  : ComService.$.SAVE,
+				nameSpace : "PpeDorm0370Mapper",
+				sqlId	  : ["insert", "update", ""],       //mapper에서 존재하는 id가 insert와 update인 쿼리를 실행하겠다는 의미 
+				inds	  : "ds_list:U",
+// 				validSql  : { //저장시 키 중복조회가 필요한 경우 (return null or return 0)
+// 					nameSpace : "AdmGood0030Mapper",
+// 					sqlId	  : "selectDupCheck",
+// 					value	  : "0", //유효한 값, 해당 값 외 리턴시에는 false
+// 					msg		  : this.gfn_getMsg("중복된 데이터가 존재합니다.")
+// 				}
+			}
+		];	
+		ComService.doAction(this, oData).then(function(form, e) {
+			form.gfn_setStatus("save");
+			form.fn_search();
+		});	
+	});
+};
+/**
+* 삭제 처리
+* @return
+*/
+this.fn_delete = function()
+{
+	this.gfn_deleteRow(this.ds_list, function (oData){ // grid를 선택할 수 있지만 rowCount를 가져오지 못하기에, ds_list를 생성
+		oData.sController = ComService.$.CONTROLLER;	
+		oData.svcList = [
+				{
+					action	  : ComService.$.DELETE,
+					nameSpace : "PpeDorm0370Mapper",
+					sqlId	  : "delete",
+					inds	  : "ds_list:U",
+				}
+		];
+			
+		ComService.doAction(this, oData).then(function(form, e) {
+			form.gfn_alertMsg("삭제완료");
+			form.fn_search();
+		});
+	});
+};
+
+
+/* dataPass 없는 팝업 만들기 
+-> 조회 동작 실행 후 , 결과가 존재하는 경우, 파라미터를 담아서 팝업을 보여줌
+*/
+this.fn_search= function ()
+{
+			var oData = {
+			svcid : "selectRes",
+			svcList : [
+				{
+					action	  : ComService.$.SEARCH,
+					nameSpace : "PpeOcdc0020Mapper",
+					sqlId	  : "selectRes",
+					inds      : "ds_in",
+					outds	  : "ds_list",
+				}
+			]
+		};
+		this.doAction(oData).then(function(form, e) {
+			var v_cnt = form.ds_list.rowcount;
+			if(v_cnt < 1){
+				form.gfn_alertMsg("해당 검색조건에 맞는 데이터가 존재하지 않습니다.");
+				return;
+			}else{
+				// 팝업
+				var options = {
+						irum : form.ds_in.getColumn(0, "irum"),         // 데이터셋에 존재하는 irum의 값을 담음
+						birth : form.ds_in.getColumn(0, "birth"),       // 데이터셋에 존재하는 birth의 값을 담음 
+						gubun : form.ds_in.getColumn(0, "gubun"),       // 데이터셋에 존재하는 gubun의 값을 담음
+						userId : UserSession.$.loginId,                 // 세션에 존재하는 userId의 값을 담음 
+						callback 	: "fn_callbackServicePopup10",      // 후처리를 할 콜백 함수 
+				};
+				
+				form.gfn_popup("PPE_OCDC_0020_P01", options);	        // 팝업 오픈 
+			}
+			
+		});
+};
+
+
+/* dataPass가 존재하는 팝업의 경우 
+1) 상급자한테 만든다고 말하기 
+2) Nexacro의 Application의 PopupSelectList.js에 팝업 이름 및 양식에 맞게 작성함 
+예시 : PPE_DORM_0030_M00.xfdl
+*/
+
+// 돋보기 버튼 클릭시 팝업 
+this.div_search_btn_searchUser_onclick = function(obj:nexacro.Button,e:nexacro.ClickEventInfo)
+{
+	var v_hakbun = this.div_search.form.edt_hakbun.value; // 학번 입력 필드의 값
+ 
+	var options = {
+		callback : "fn_callbackPop",                    // 후처리 
+		value : v_hakbun,                               // 팝업 파라미터로 전달되는 값 
+		userNm : this.div_search.form.edt_hakbun.value, // 해당 팝업의 쿼리를 추적하여, 쿼리에 필요한 파라미터를 생성
+		dataPass : true,                                // 팝업을 생성하기 전 dataPass가 실행되어, 조회 결과가 1개의 행을 반환할 경우, 팝업 화면을 보여주지 않음 
+	};
+	this.gfn_popup("CMM_PPUP_USER_P03", options);	    // 보여줄 팝업명
+	//break;
+};
+
+// 학생조회 팝업 콜백 (후처리:: 팝업이 종료된 후 실행되는 내용 )
+this.fn_callbackPop = function(svcid, data)
+{
+	this.ds_in.setColumn(0, "hakbun",data.empno);			//학번
+	this.ds_in.setColumn(0, "irum"  ,data.userNm);			//성명
+	this.div_search.form.edt_hakgwa.set_value(data.deptNm);	//직번
+	this.fn_search();
+
+};
+
+
+// 사진 조회 스크립트 
+this.fn_searchPhoto = function() {
+	this.ds_photo.clearData();
+	
+	var conifg = {	
+		nameSpace : "PpeDorm0380Mapper",
+		sqlId	  : "selectPhoto",
+		outds	  : "ds_photo",
+		params 	  : {
+			hakbun : this.ds_list.getColumn(0, "hakbun")
+		}
+	};	
+	this.gfn_searchBlob(conifg, function() {
+		var photo = this.ds_photo.getColumn(0, "photo");
+		if (!Eco.isEmpty(photo)) {
+			this.img_Pic.set_stretch("fit");
+			this.img_Pic.set_image(this.ds_photo.getColumn(0, "photo"));
+		} else {
+			this.gfn_resetImageViewer(this.img_Pic);
+		}		
+	});
+};
+
+// 사진 조회 XML
+<!-- BLOB 조회를 위한 RESULT MAP 
+BLOB(Binary Large Object) :: 대용량의 이진 데이터 (종류 :: 이미지, 비디오, 오디오 파일 등 )   **Java에서는 주로 byte[] 배열로 매핑**
+--> 
+<resultMap type="resultData" id="photoMap">
+    <result property="photo" column="PHOTO" jdbcType="BLOB" javaType="byte[]"/>
+</resultMap>
+
+<!-- 인사통합정보_사진 -->
+<select id="selectPhoto" resultMap="photoMap">
+    SELECT PHOTO
+            , PHOTOSIZE
+            , BAL_CHASU
+    FROM EAGLE.SHJPHOTM  		--- 사진
+        WHERE HAKBUN = #{hakbun}
+</select>
+
+<!-- CLOB 조회를 위한 RESULT MAP 
+CLOB(Character Large Object) :: 대용량의 텍스트 데이터 (종류 :: 문서, xml파일, 긴 문자열 등 )   **Java에서는 주로 String으로 매핑**
+-->
+
+// 안내문 조회 XML 
+
+<resultMap id="listMap" type="resultData">
+    <result property="CONT" column="CONT" jdbcType="CLOB" javaType="java.lang.String"/>
+</resultMap>
+    
+<select id="selectAn" resultMap="listMap">
+    SELECT BUSS_FG
+            , BUSS_NM
+            , BUSS_GRP_CD
+            , USE_YN
+            , CONT
+            , INPT_ID
+            , INPT_DTTM
+            , INPT_IP
+            , UPDT_ID
+            , UPDT_DTTM
+            , UPDT_IP
+
+    FROM EAGLE.COM_INFO
+        <if test="bussFg != null and bussFg != ''">
+            WHERE BUSS_FG  =  #{bussFg}
+    </if>
+</select>
+
+
+
+/*
+안내문 작성 
+projectName:: PPE_OCDC_0020_W01
+**안내문 작성할 때, 컴포넌트의 종류는 Wysiwyg를 사용해야한다.**
+*/
+
+
+
+/*
+신규 행의 displaytype 과 edittype에 expr 적용하기 
+*/
+
+displaytype dataset.getRowType(currow) == 2 ? 'editcontrol' : 'nomal'
+edittype dataset.getRowType(currow) == 2 ? 'text' : 'none'
+
