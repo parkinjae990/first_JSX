@@ -212,3 +212,199 @@ this.ds_list_oncolumnchanged = function(obj:nexacro.NormalDataset,e:nexacro.DSCo
 	}	
 };
 
+
+
+<
+<ibatis의 org를 mybatis로 수정 >
+
+
+넥사크로 코드 
+
+
+/**
+ * 저장 처리
+ * @return
+ */
+this.fn_save = function () {
+
+	if (!this.fn_saveCheck()) {
+			return;
+	}
+// 		
+ 	var rowCnt = this.ds_buljum.rowcount;
+	
+	for (var i = 0; i < rowCnt; i++) {
+		var rowtype = this.ds_buljum.getRowType(i);
+		//var bulcode = this.ds_buljum.getColumn(i, "bulcode");
+		var bulcodeOrg = this.ds_buljum.getOrgColumn(i, "bulcode");
+		if(rowtype == '4'){
+			//this.ds_buljum.setColumn(i, "bulcode", bulcode);
+			this.ds_buljum.setColumn(i, "bulcodeOrg", bulcodeOrg);
+			
+			trace(this.ds_buljum.getColumn(i, 'bulcode'))
+			trace("세팅된 bulcodeOrg값 "+ this.ds_buljum.getColumn(i, 'bulcodeOrg'))
+		}
+	}
+	this.gfn_saveRow(this.ds_buljum, function (oData) { 
+		oData.sController = ComService.$.CONTROLLER;
+		oData.svcList = [
+			{
+				action	  : ComService.$.SAVE,
+				nameSpace : "PpeDorm0380Mapper",
+				sqlId	  : ["insert", "update", ""],
+				inds	  : "ds_buljum:U",
+			}
+		];	
+		ComService.doAction(this, oData).then(function(form, e) {
+		
+			//저장 시 하단에 저장표시
+			form.gfn_setStatus("save");
+			form.gfn_alertMsg("정상적으로 저장되었습니다.");
+			form.fn_search();
+			
+		});
+	});
+};
+ 
+/**
+* 삭제 처리
+* @return
+*/
+this.fn_delete = function()
+{
+
+	this.gfn_deleteRow(this.ds_buljum, function (oData){ 
+		oData.sController = ComService.$.CONTROLLER;	
+		oData.svcList = [
+				{
+					action	  : ComService.$.DELETE,
+					nameSpace : "PpeDorm0380Mapper",
+					sqlId	  : "delete",
+					inds	  : "ds_buljum:U",
+				}
+		];
+			
+		ComService.doAction(this, oData).then(function(form, e) {
+			if(form.ds_buljum.rowcount == 1){
+				this.gfn_alertMsg('삭제할 데이터가 없습니다. 다시 확인해 주세요.');
+				return;
+			}else{
+			}
+				form.gfn_alertMsg("삭제완료");
+				form.fn_search();
+		});
+	});
+};
+
+
+
+// =================================================================================================
+// ▶ 사용자 정의 Function
+// =================================================================================================
+
+// 사진조회
+this.fn_searchPhoto = function() {
+	this.ds_photo.clearData();
+	
+	var conifg = {	
+		nameSpace : "PpeDorm0380Mapper",
+		sqlId	  : "selectPhoto",
+		outds	  : "ds_photo",
+		params 	  : {
+			hakbun : this.ds_list.getColumn(0, "hakbun")
+		}
+	};	
+	this.gfn_searchBlob(conifg, function() {
+		var photo = this.ds_photo.getColumn(0, "photo");
+		if (!Eco.isEmpty(photo)) {
+			this.img_Pic.set_stretch("fit");
+			this.img_Pic.set_image(this.ds_photo.getColumn(0, "photo"));
+		} else {
+			this.gfn_resetImageViewer(this.img_Pic);
+		}		
+	});
+};
+
+// 아래에 존재하는 그리드 
+this.fn_searchBuljum = function() 
+{
+	var oData = {
+		svcid : "searchBuljum",
+		svcList : [
+			{
+				action	  : ComService.$.SEARCH,
+				nameSpace : "PpeDorm0380Mapper",
+				sqlId	  : "searchBuljum",
+				inds      : "ds_in",
+				outds	  : "ds_buljum",
+			}
+		]
+	};
+	this.doAction(oData).then(function(form, e) {
+		var v_cnt = form.ds_buljum.rowcount;
+
+		form.div_resize00.form.sta_Cnt.set_text("총 "+ v_cnt +"건");
+		form.div_resize00.form.sta.set_text("해당년도 벌점누계 : " + form.ds_buljum.getColumn(form.ds_buljum.rowposition ,"bulsum")+" 점")
+		if(v_cnt < 1){
+			form.gfn_alertMsg("해당 검색조건에 맞는 데이터가 존재하지 않습니다.");
+			return;
+		}
+	});
+};
+
+
+
+mybatis 코드 
+
+	<select id="searchBuljum" resultType="resultData">
+		
+	SELECT TO_CHAR(B.BULDATE , 'YYYYMMDD') AS BULDATE
+	     , A.BULNM
+	     , A.BULJUM
+	     , B.HAKBUN
+	     , B.BULCODE
+	     , NULL AS BULCODE_ORG
+	     , B.YEONDO
+	     , B.HAKGI	   
+	     , ( SELECT NVL(SUM(B.BULJUM),0)  FROM EAGLE.BULJUM A, EAGLE.BULCODEM B
+	       	WHERE A.BULCODE = B.BULCODE 
+	       		AND A.YEONDO = #{yeondo} 
+	       		AND TRIM(A.HAKBUN)= #{hakbun} ) AS BULSUM  -- 개발할 때 보이지 않아서, 학번 컬럼에 TRIM 적용 , 그러나 ASIS운영에서는 보임
+	  FROM EAGLE.BULCODEM A
+	     , EAGLE.BULJUM B
+	 WHERE 1=1
+	   AND B.BULCODE = A.BULCODE
+	   
+	   AND TRIM(B.HAKBUN)  = #{hakbun}   	   
+	   	
+	 ORDER BY B.BULDATE DESC
+	</select>
+
+<update id="update">
+	BEGIN
+	
+		UPDATE EAGLE.BULJUM
+		   SET BULCODE = #{bulcode}
+		     , BULDATE = TO_DATE(#{buldate},'YYYYMMDD') 
+		 WHERE HAKBUN  = #{hakbun} 
+		   	   AND YEONDO  = #{yeondo}
+		  	   AND HAKGI   = #{hakgi}
+		   	   AND BULCODE = #{bulcodeOrg}
+		   	   AND BULDATE = TO_DATE(#{buldate},'YYYYMMDD');
+		   
+		UPDATE EAGLE.DOMASTER D
+			SET D.BJUMSU =
+				(
+					SELECT SUM(B.BULJUM)
+					FROM EAGLE.BULJUM A, EAGLE.BULCODEM B
+					WHERE A.BULCODE = B.BULCODE 
+						AND A.HAKBUN =  #{hakbun}
+						AND A.YEONDO = #{yeondo}	
+					GROUP BY A.HAKBUN
+				)
+			WHERE D.HAKBUN = #{hakbun} ;
+							   
+	END;     
+	</update>
+
+
