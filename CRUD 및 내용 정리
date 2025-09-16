@@ -271,8 +271,6 @@ projectName:: PPE_OCDC_0020_W01
 **안내문 작성할 때, 컴포넌트의 종류는 Wysiwyg를 사용해야한다.**
 */
 
-
-
 /*
 신규 행의 displaytype 과 edittype에 expr 적용하기 
 */
@@ -280,3 +278,60 @@ projectName:: PPE_OCDC_0020_W01
 displaytype dataset.getRowType(currow) == 2 ? 'editcontrol' : 'nomal'
 edittype dataset.getRowType(currow) == 2 ? 'text' : 'none'
 
+
+
+/*
+dataset이 아닌 파라미터를 전송하여, select 후 해당 결과를 dataset에 담는 과정
+*/
+this.form_onload = function (obj:Form, e:nexacro.LoadEventInfo){
+	
+	// Form Load 시 공통 기능 처리
+	this.gfn_formOnLoad(obj);
+	
+	// 조회조건 세팅
+	this.div_search.form.spn_year.set_value(this.gfn_getOrigSchdulInfo("SBUS").year); // 년도세팅
+	this.div_search.form.cmb_hakgi.set_value(this.gfn_getOrigSchdulInfo("SBUS").hakgi); // 학기세팅 (공통 코드에 존재함) 
+	this.div_search.form.rdo_sch.set_index(0);  // 등하교구분 : 등교
+	
+	// 콤보 매핑	
+	this.div_search_rdo_sch_onitemchanged(); // radio 에서 아이템 선택이 변경된 후 발생하는 이벤트 
+};
+this.div_search_rdo_sch_onitemchanged = function(obj:nexacro.Radio,e:nexacro.ItemChangeEventInfo)
+{	
+	this.ds_sub.clearData();
+	this.fn_dayGbn();
+};
+
+// 조회조건 요일콤보 매핑
+this.fn_dayGbn = function ()
+{
+	var oData = {
+		svcid : "dayGbnCombo",
+		svcList : [
+			{
+				action	  : ComService.$.SEARCH,
+				nameSpace : "AdmGood0050Mapper",
+				sqlId	  : "dayGbnCombo",
+				args      : ["cd=" + this.div_search.form.rdo_sch.value],
+				outds	  : "ds_dayGbn",
+			}
+		]
+	};
+	this.doAction(oData).then(function(form, e) {
+		form.div_search.form.cmb_daygbnCd.set_index(0);	
+		form.fn_rdo_changed();
+	});
+};
+
+<!-- mapper 내부의 쿼리  -->
+<!-- 요일 콤보 매핑 -->
+	<select id="dayGbnCombo" resultType="resultData">
+		SELECT	 A.OLD_CD AS CD
+				,A.CODENM_K AS NM
+		FROM	TC_CODE_CMMN_CD_DETAIL A
+		WHERE	A.CODE_ID = '2140'
+		  AND   A.USE_AT = 'Y'
+		  AND   A.EXTRA_CODE1 = DECODE(#{cd}, 'BEAA', '2139100', 'BEBB', '2139101')
+		 
+		ORDER	BY A.SORT_ORDR, A.CODE_ID, A.CODE
+	</select>
