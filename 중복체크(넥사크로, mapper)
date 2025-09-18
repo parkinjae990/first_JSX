@@ -1,0 +1,40 @@
+1) mapper 내부 쿼리 
+<select id="selectDuplicCheck" resultType="resultData">
+    SELECT COUNT(*)
+    FROM EAGLE.RCPCODEM
+    WHERE RCPCODE = #{rcpcode};
+</select>
+
+2) 넥사크로 내부 스크립트 
+
+this.fn_save = function()
+{
+    if(!this.fn_saveCheck()){
+        return ; 
+    }
+
+    this.gfn_saveRow(this.ds_list, function(oData){
+        oData.sController = ComService.$.CONTROLLER,
+        oData.svcList = [
+            {
+                action : ComService.$.SAVE,
+                nameSpace : "PpeDorm0390Mapper",
+                sqlId : ["insert","update",""]
+                inds : "ds_list:U",
+                validSql : [
+                    nameSpace: "PpeDorm0390Mapper",
+                    sqlId : "selectDuplicCheck",
+                    value : "0"
+                    msg : this.gfn_getMsg("중복된 데이터가 존재합니다.")
+                ]
+            }
+        ];
+        ComService.doAction(this, oData).then(function(form,e){
+            // 후처리
+            form.gfn_setStatus("save");
+            form.gfn_alertMsg("정상적으로 저장했습니다.");
+            form.fn_search();
+        });
+    });
+
+}
