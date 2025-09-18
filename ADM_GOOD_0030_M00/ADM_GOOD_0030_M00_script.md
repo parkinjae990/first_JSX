@@ -86,7 +86,7 @@ this.fn_insert = function (){
 // /**
 //  * 저장 유효성 검사
 //  */
-this.fn_saveCheck = function () {
+this.fn_saveCheck = function () { // rowState가 1(신규)의 경우에는 적용되지 않음 
 	//마감여부 체크 시 마감일시 검사
 
 	var validationMappings = {
