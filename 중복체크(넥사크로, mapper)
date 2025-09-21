@@ -1,9 +1,12 @@
+# 해당 로직은 EAGLE.RCPCODEM에서 rcpCode가 일치하는 내용을 찾아서 개수를 셈 
 1) mapper 내부 쿼리 
 <select id="selectDuplicCheck" resultType="resultData">
     SELECT COUNT(*)
     FROM EAGLE.RCPCODEM
     WHERE RCPCODE = #{rcpcode};
 </select>
+
+
 
 2) 넥사크로 내부 스크립트 
 
@@ -21,11 +24,11 @@ this.fn_save = function()
                 nameSpace : "PpeDorm0390Mapper",
                 sqlId : ["insert","update",""]
                 inds : "ds_list:U",
-                validSql : [
+                validSql : [ // 넥사크로의 validSql 로직은 일반적으로 지정된 value와 쿼리 결과가 "일치하지 않을 때" (not equal) msg를 출력하는 방식으로 설계되어 있음
                     nameSpace: "PpeDorm0390Mapper",
                     sqlId : "selectDuplicCheck",
-                    value : "0"
-                    msg : this.gfn_getMsg("중복된 데이터가 존재합니다.")
+                    value : "0"   //sqlId를 통해 실행된 쿼리의 결과값과 비교할  기준값을 의미하며, 해당 value값과 일치하지 않으면, msg를 실행 
+                    msg : this.gfn_getMsg("중복된 데이터가 존재합니다.") // valieSql의 설계에 의해서, value가 일치하지 않으면, 작성해둔 msg가 실행이 된다. 
                 ]
             }
         ];
