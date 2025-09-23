@@ -335,3 +335,22 @@ this.fn_dayGbn = function ()
 		 
 		ORDER	BY A.SORT_ORDR, A.CODE_ID, A.CODE
 	</select>
+
+
+
+mapper에서 CLOB 의 경우 작성
+#CLOB > 문자형 대용량 데이터 
+type>> resultMapdp에 부여된 고유한 이름 
+<resultMap id="listMap" type="resultData">
+    <result property="CONT" column="CONT" jdbcType="CLOB" javaType="java.lang.String"/>
+</resultMap>
+
+			
+mapper 에서 BLOB의 경우 작성 
+#BLOB > 문자형 대용량 데이터 
+<!-- BLOB 조회를 위한 RESULT MAP -->
+<resultMap type="resultData" id="photoMap">
+    <result property="photo" column="PHOTO" jdbcType="BLOB"
+        javaType="byte[]" />
+</resultMap>            
+

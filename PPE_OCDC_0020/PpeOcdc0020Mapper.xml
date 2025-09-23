@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PpeDorm0460Mapper">
+
+	<select id="selectNation" resultType="resultData">
+		 SELECT CODE
+			 , CDFNM
+		 FROM EAGLE.SGCCODEM
+		 WHERE CODE LIKE '71%'
+		 AND USINGYN = 'Y'
+		 ORDER BY CDFNM
+	</select>
+	<!-- 오라클의 with 절에는 여러개의 임시 테이블을 생성할 수 있으며 ","(쉼표)를 찍고 이어서 선언한다. -->
+	<select id="selectList" resultType = "resultData">
+		<![CDATA[	
+		-- 20250523 표기방식 변경하면서 쿼리 다 바뀜 (외박/귀가/일일체크 조인해서 다 보여달라함:유승훈) 
+		-- 1. 월 기준 설정
+		WITH CALENDAR AS (
+		    SELECT TO_DATE(#{yeondo}||#{month}||'01', 'YYYYMMDD') + LEVEL - 1 AS CKDATE -- LEVEL은 1부터 시작함, 즉, 초기 날짜가 1일부터 시작인데, -1을 적용하지 않으면, 실제 시작이 2일부터 시작하기에 +LEVEL -1을 적용함 
+		    FROM DUAL
+		    CONNECT BY LEVEL <= TO_NUMBER(TO_CHAR(LAST_DAY(TO_DATE(#{yeondo}||#{month}||'01', 'YYYYMMDD')), 'DD')) -- 마지막 날짜의 '일(DAY)'값을 숫자로 반환
+		),
+		-- 2. 외박신청 데이터를 일별로 펼침
+		OUTING AS (
+		    SELECT 
+		        G.HAKBUN,
+		        C.CKDATE,
+		        CASE WHEN G.SAYUCODE = '1' THEN '3' ELSE G.SAYUCODE END AS CODE
+		    FROM EAGLE.GGMASTER G
+		    JOIN EAGLE.CALENDAR C ON C.CKDATE BETWEEN G.STARTDATE AND G.ENDDATE
+		    WHERE USEYN = 'Y'
+		),
+		-- 3. 일일체크 데이터를 그대로 사용
+		CHECKDATA AS (
+		    SELECT 
+		        D.HAKBUN,
+		        D.CKDATE,
+		        D.CK AS CODE
+		    FROM EAGLE.DORMCHECK D
+		    WHERE D.CKDATE BETWEEN TO_DATE(#{yeondo}||#{month}||'01', 'YYYYMMDD')
+		    				   AND LAST_DAY(TO_DATE(#{yeondo}||#{month}, 'YYYYMM'))
+		),
+		-- 4. 외박과 체크를 합치되, 체크값 우선 적용
+		MERGED AS (
+		    SELECT HAKBUN, CKDATE, CODE
+		    FROM (
+		        SELECT 
+		            HAKBUN,
+		            CKDATE,
+		            CODE,
+		            ROW_NUMBER() OVER (PARTITION BY HAKBUN, CKDATE ORDER BY CODE) AS RN
+		        FROM (
+		            SELECT HAKBUN, CKDATE, CODE FROM EAGLE.CHECKDATA
+		            UNION
+		            SELECT O.HAKBUN, O.CKDATE, O.CODE 
+		            FROM EAGLE.OUTING O
+		            WHERE NOT EXISTS (
+		                SELECT 1 FROM EAGLE.CHECKDATA C
+		                WHERE C.HAKBUN = O.HAKBUN AND C.CKDATE = O.CKDATE
+		            )
+		        )
+		    )
+		    WHERE RN = 1
+		),
+		-- 5. 주소정보 필터링
+		FILTER_SHJADDRM AS (
+		    SELECT HSBBTEL, HAKBUN
+		    FROM EAGLE.SHJADDRM
+		    WHERE TO_CHAR(USEDATE,'YYYY') > '2014'
+		    -- 실행계획 속도개선 : DOMASTER 최소 연도가 2015 이므로 2013년도부터 필터링--
+		),
+		-- 6. 일자별 상태값 Pivot 처리
+		FINAL AS (
+		    SELECT *
+		    FROM (
+		        SELECT 
+		            HAKBUN,
+		            TO_CHAR(CKDATE, 'DD') AS DAY,
+		            DECODE(CODE, '0', '', '1', 'O', '2', '외', '3', '귀', '') AS CODE
+		        FROM EAGLE.MERGED
+		    )
+		    PIVOT (
+		        MAX(CODE) FOR DAY IN (
+		            '01' AS Column1,  '02' AS Column2, '03' AS Column3, '04' AS Column4, '05' AS Column5,
+		            '06' AS Column6,  '07' AS Column7, '08' AS Column8, '09' AS Column9, '10' AS Column10,
+		            '11' AS Column11, '12' AS Column12, '13' AS Column13, '14' AS Column14, '15' AS Column15,
+		            '16' AS Column16, '17' AS Column17, '18' AS Column18, '19' AS Column19, '20' AS Column20,
+		            '21' AS Column21, '22' AS Column22, '23' AS Column23, '24' AS Column24, '25' AS Column25,
+		            '26' AS Column26, '27' AS Column27, '28' AS Column28, '29' AS Column29, '30' AS Column30,
+		            '31' AS Column31
+		        )
+		    )
+		)
+		-- 7. DOMASTER 및 관련 테이블과 조인하여 최종 출력
+		SELECT  DOMASTER.DONG
+		       ,DOMASTER.SIL
+		       ,DOMASTER.SIL2
+		       ,DOMASTER.HAKBUN
+		       ,DOMASTER.STATE
+		       ,EAGLE.SF_GET_DEPT(SHJHAKJM.DAEHAK) DAEHAK
+		       ,EAGLE.SF_GET_DEPT(SHJHAKJM.HAKGWA) HAKGWA
+		       ,SHJHAKJM.HAKYOUN
+		       ,SHJHAKJM.IRUM
+		       ,SHJHAKJM.SEX
+		       ,TRIM(DORMROOM.NUM) AS NUM
+		       ,FILTER_SHJADDRM.HSBBTEL
+		       ,MAX(DORMCHECK.CKDATE) AS CKDATE
+		       ,DORMCHECK.MONTH
+		       ,MAX(SGCCODEM.CDFNM) AS NATION
+		       ,FINAL.Column1, FINAL.Column2, FINAL.Column3, FINAL.Column4, FINAL.Column5
+		       ,FINAL.Column6, FINAL.Column7, FINAL.Column8, FINAL.Column9, FINAL.Column10
+		       ,FINAL.Column11, FINAL.Column12, FINAL.Column13, FINAL.Column14, FINAL.Column15
+		       ,FINAL.Column16, FINAL.Column17, FINAL.Column18, FINAL.Column19, FINAL.Column20
+		       ,FINAL.Column21, FINAL.Column22, FINAL.Column23, FINAL.Column24, FINAL.Column25
+		       ,FINAL.Column26, FINAL.Column27, FINAL.Column28, FINAL.Column29, FINAL.Column30
+		       ,FINAL.Column31
+		  FROM  	 EAGLE.DOMASTER DOMASTER  
+		  INNER JOIN EAGLE.SHJHAKJM 
+		  ON  		 DOMASTER.HAKBUN = SHJHAKJM.HAKBUN
+		  LEFT OUTER JOIN EAGLE.SGCCODEM 
+		  ON  		 EAGLE.SHJHAKJM.NATIONAL = SGCCODEM.CODE
+		  INNER JOIN EAGLE.DORMROOM 
+		  ON 		 DOMASTER.HAKBUN = DORMROOM.HAKBUN
+		  INNER JOIN FILTER_SHJADDRM 
+		  ON 		 DOMASTER.HAKBUN = FILTER_SHJADDRM.HAKBUN
+		  
+		  -- 20250325 일일체크 안한 학생도 조회하도록 수정 (유승훈 주무관) --
+		  LEFT OUTER JOIN EAGLE.DORMCHECK ON DOMASTER.HAKBUN = DORMCHECK.HAKBUN 
+		  							   AND (
+										        (#{month} = '13' AND EAGLE.DORMCHECK.MONTH < '13') OR
+										        (#{month} != '13' AND EAGLE.DORMCHECK.MONTH = #{month})
+										   )
+		  LEFT OUTER JOIN FINAL ON DOMASTER.HAKBUN = FINAL.HAKBUN    								   
+		 WHERE DOMASTER.STATE BETWEEN '1' AND '42'
+		   AND DOMASTER.YEONDO = #{yeondo}
+		   AND DOMASTER.HAKGI = #{hakgi} 
+		 ]]>  
+		   <!-- 20250416 이름 학번 일괄 검색으로 수정 -->
+		   <if test="search != null and search != '' ">
+		       AND (SHJHAKJM.HAKBUN LIKE #{search} || '%' OR SHJHAKJM.IRUM LIKE #{search} || '%')
+		   </if>
+		   <if test="sex != null and sex !=''">
+		   		AND SHJHAKJM.SEX = #{sex}
+		   </if>
+		   <if test="month != null and month != ''">
+			   AND (
+			        DORMCHECK.MONTH IS NULL OR
+			        (#{month}= '13' AND DORMCHECK.MONTH <![CDATA[<]]>  '13' AND DOMASTER.YEONDO = '2025' AND DOMASTER.HAKGI = '1') OR
+			        (#{month} != '13' AND DORMCHECK.MONTH = #{month}AND DOMASTER.YEONDO = '2025' AND DOMASTER.HAKGI = '1')
+			    )
+		   </if>
+		   
+		   <!-- 20250325 검색조건 인실 DORMROOMGBN을 INSIL로 변경 (유승훈 주무관)-->  
+		   
+		   <!-- 1인실추가도 1인실에서 조회되도록 유승훈 20250901 -->
+		  <!-- insil 조건 -->
+		   <if test="insil != null and insil != ''">
+			   <choose>
+			       <when test='"1".equals(insil)'>
+			           AND (DOMASTER.STATE IN ('11','21','31','41') 
+			                OR (DOMASTER.STATE IN ('12','22','32','42') AND DOMASTER.SINGLE = 'Y')
+			               )
+			       </when>
+			       <when test='"2".equals(insil)'>
+			           AND DOMASTER.STATE IN ('12','22','32','42')
+			       </when> 
+			   </choose>
+		   </if>
+		   <if test='"Y".equals(single)'>
+		   		AND DOMASTER.SINGLE = #{single}
+		   </if>
+		   <if test="ckDate!= null and ckDate != ''" >
+		   		AND DOMASTER.SINGLE = #{ckDate}
+		   </if>
+		   <if test="dong != null and dong != '' ">
+		   		AND DOMASTER.DONG = #{dong}
+		   </if>
+		   <!-- 20250417 국적 추가 (유승훈 주무관) -->
+		   <if test="nation != null and nation != '' ">
+		       AND SGCCODEM.CODE = #{nation}
+		   </if>
+		GROUP BY DOMASTER.DONG, DOMASTER.SIL, DOMASTER.SIL2, DOMASTER.HAKBUN, DOMASTER.STATE
+		         ,SHJHAKJM.DAEHAK, SHJHAKJM.HAKGWA, SHJHAKJM.HAKYOUN, SHJHAKJM.IRUM, SHJHAKJM.SEX
+		         ,DORMROOM.NUM, FILTER_SHJADDRM.HSBBTEL, DORMCHECK.CK, DORMCHECK.MONTH
+		         ,FINAL.Column1, FINAL.Column2, FINAL.Column3, FINAL.Column4, FINAL.Column5
+		         ,FINAL.Column6, FINAL.Column7, FINAL.Column8, FINAL.Column9, FINAL.Column10
+		         ,FINAL.Column11, FINAL.Column12, FINAL.Column13, FINAL.Column14, FINAL.Column15
+		         ,FINAL.Column16, FINAL.Column17, FINAL.Column18, FINAL.Column19, FINAL.Column20
+		         ,FINAL.Column21, FINAL.Column22, FINAL.Column23, FINAL.Column24, FINAL.Column25
+		         ,FINAL.Column26, FINAL.Column27, FINAL.Column28, FINAL.Column29, FINAL.Column30
+		         ,FINAL.Column31
+		ORDER BY HAKBUN
+	</select>
+</mapper>
