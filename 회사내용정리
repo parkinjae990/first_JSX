@@ -356,7 +356,7 @@ mapper 에서 BLOB의 경우 작성
 
 
 =================================================================================
-조회되는 데이터를 넥사크로 그리드에 매핑할 때
+#// 조회되는 데이터를 넥사크로 그리드에 매핑할 때
 =================================================================================
 
 학과 :: align을 Left로 조정
@@ -368,26 +368,32 @@ code값으로 매핑 되어서 한글이 아닌 숫자로 나오는 경우 :: se
 
 
 =================================================================================
-공통코드를 사용하여 mapper에서 학번 숫자를 이름으로 바꿀 때 
+#// 공통코드를 사용하여 mapper에서 학번 숫자를 이름으로 바꿀 때 
 =================================================================================
 # mapper에서 작성
  NVL(UF_HAK_DEPT_MAJOR_GET(A.DEPT_NO), UF_CMM_DEPTNM(A.DEPT_NO)) AS DEPT_NM -- 학과명
-  # 논리 
+
+ # 논리 
 "학과 전공명"이 있으면 그것을 우선적으로 사용하고, 만약 "학과 전공명"이 없으면 "일반 학과명"을 사용
+
+UF_CMM_DEPTNM() >> 변수에 합당한 부서명 반환 
+
+UF_HAK_DEPT_MAJOR_GET() >> 학부 전공명 가져오기 
+
 
 # mapper 작성 후 nexa 작성 
 그리드에 존재하는 dataset에 mapper의 DEPT_NM을 담을 칼럼 deptNm을 생성한다. 
 
 
 =================================================================================
-공통코드를 사용하여 mapper에서 학번 숫자를 이름으로 바꿀 때 
+#//공통코드를 사용하여 mapper에서 학번 숫자를 이름으로 바꿀 때 (년도 학기 설정)
 =================================================================================
 this.div_search.form.spn_year.set_value (this.gfn_getOrigSchdulInfo("DORM_20").year);  
 this.div_search.form.cmb_hakgi.set_value(this.gfn_getOrigSchdulInfo("DORM_20").hakgi);
 	
 
 =================================================================================
-중복체크하는 로직 (넥사크로, mapper)
+#//중복체크하는 로직 (넥사크로, mapper)
 =================================================================================
 # 해당 로직은 EAGLE.RCPCODEM에서 rcpCode가 일치하는 내용을 찾아서 개수를 셈 
 1) mapper 내부 쿼리 
@@ -432,3 +438,131 @@ this.fn_save = function()
     });
 
 }
+
+=================================================================================
+#//화면 UI에서 달력 사이 "~"의 넓이와 간격
+=================================================================================
+
+A(캘린더 컴포넌트) ~ B(캘린더 컴포넌트) 존재시 
+
+A 와 ~의 간격 :: 2
+B 와 ~의 간격 :: 2
+~의 넓이 15
+
+
+=================================================================================
+#//출근부 및 장기출장 
+=================================================================================
+# 연차, 공가의 경우 
+결근일수 추가하지 않음 
+
+
+=================================================================================
+#// 주민번호 관련된 로직 
+=================================================================================
+
+# 스크립트 
+
+this.div_search_btn_showIhidnum_onclick = function(obj:nexacro.Button,e:nexacro.ClickEventInfo)
+{
+	if(this.ihidFlag == "N"){
+		this.ihidFlag = "Y";		
+		this.grd_list.redrawExprCell("body");	
+	}else if(this.ihidFlag == "Y"){
+		this.ihidFlag = "N";		
+		this.grd_list.redrawExprCell("body");		
+	}	
+};
+
+
+# 그리드 내부 주민번호 속성 
+displaytype :: mask
+maskeditformat :: comp.parent.ihidFlag == 'N' ? '######-{#######}' : '######-#######'
+maskedittype :: String
+
+=================================================================================
+#// 학과구분, 정원구분을 생년월일 앞에 추가할 때
+=================================================================================
+
+첫 번째 순서는 학과구분 , 두 번째 순서는 정원 구분의 순서대로 값을 넣는다. 
+
+예시 :: 학과 구분 | 정원 구분 | 생년월일
+
+=================================================================================
+#// 사용자 정의를 사용하는 경우 
+=================================================================================
+
+EXTRA_CODE1 :: 공통 탭> 사용자 정의에 위치하고 있음 
+여기서 EXTRA_CODE1을 사용하는 경우 :: 제적, 휴학이라는 틀 안에 여러 종류가 있는 경우 EXTRA_CODE 값을 이용해, 필요한 데이터를 가져온다. 
+
+예시 쿼리  （제적의 종류가 많기에 모든 제적을 갖고 오기 위해 EXTRA_CODE를 사용한경우)
+
+--  TH_HAKJ_CHANGE_REQST_ST에서 제적의 종류와 상관없이 모든 제적에 대한 제적 일자를 가져오기
+SELECT  SKNRGS_CHANGE_DE
+FROM 	TH_HAKJ_CHANGE_REQST_STD
+WHERE	SKNRGS_CHG_CD IN (
+						  SELECT UCODE
+						  FROM   TC_CODE_CMMN_CD_DETAIL 				-- 공통코드 세부 사항 테이블
+						  WHERE   1 = 1
+						  AND CODE_ID = '2070'                			-- 학적 변동코드 
+						  AND EXTRA_CODE1 = '2040005'
+						 )
+AND 1=1;						 
+
+재입학생명부 :: HAK_BNGS_1050_M00 의 mapper 내용 
+
+<select id="selectList" resultType="resultData">
+		SELECT  B.DEPT_NO                                                       		-- 학과
+		      , UF_CMM_DEPTNM(B.DEPT_NO) AS DEPT_NM 									-- 학과명
+		      , UF_CMM_UCODENM(B.GRADE_CD) AS GRADE_NM                                  -- 학년명
+		      , B.GRADE_CD																-- 학년코드
+		      , B.STDNO                                                                 -- 학번
+		      , B.KOR_NM                                                                -- 이름
+			  , UF_CMM_UCODENM(B.SUBJ_CD) AS SUBJ_NM                                    -- 학과구분명
+		      , B.SUBJ_CD                                                               -- 학과구분(1343) 
+		      , UF_CMM_UCODENM(B.PSNCPA_SE_CD) PSNCPA_SE_NM                             -- 정원구분명
+		      , B.PSNCPA_SE_CD                                                          -- 정원구분(4320)
+		      , B.BRTHDY                                                                -- 생년월일
+		      , UF_CMM_UCODENM(A.SKNRGS_CHG_CD) AS SKNRGS_CHG_NM						-- 학적변동명
+		      , A.SKNRGS_CHG_CD                                                         -- 학적변동코드 (2070)
+		      , A.SKNRGS_CHANGE_DE  AS JEIPHAK_SKNRGS_CHANGE_DE                         -- 학적변동일자(재입학일자)
+		      , (
+		      	 -- 제적상태의 여려 종류중 제적일자가 복학일자보다 작으며, 제적일자가 가장 최신인 날짜를 담음
+		      
+		         SELECT MAX(C.SKNRGS_CHANGE_DE) 										-- 제적일자가 가장 최신인 날짜 
+		         FROM TH_HAKJ_CHANGE_REQST_STD C
+		         WHERE 1 = 1
+		         AND C.STDNO = A.STDNO                                                  -- 조인 조건 연결 (학번)
+		         AND C.SKNRGS_CHANGE_DE <![CDATA[ < ]]> A.SKNRGS_CHANGE_DE              -- 제적일자가 복학일자보다 작음
+		         AND C.SKNRGS_CHG_CD  IN (
+		                                  SELECT UCODE
+		                                  FROM   TC_CODE_CMMN_CD_DETAIL 				-- 공통코드 세부 사항 테이블
+		                                  WHERE   1 = 1
+		                                  AND CODE_ID = '2070'                			-- 학적 변동코드 
+		                                  AND EXTRA_CODE1 = '2040005'               	-- 사용자 정의(제적상태)
+		                                 )
+		      ) AS JE_SKNRGS_CHANGE_DE                                                  -- 학적변동일자(제적일자)
+    		  , UF_CMM_GET_IHIDNUM(B.PID) AS IHIDNUM        							-- 주민등록번호
+
+		FROM   TH_HAKJ_CHANGE_REQST_STD A
+		INNER JOIN  TH_HAKJ_M B
+        ON A.STDNO = B.STDNO 															-- A테이블과 B 테이블 연결 
+		WHERE 1=1
+		AND A.SKNRGS_CHG_CD = '2070001'													-- 재입학 상태 (단 1개만 존재하기에, 사용자 정의 EXTRA_CODE 사용할 필요 없음 )
+	 <if test="deptNo != null and deptNo != ''">
+	 	AND    B.DEPT_NO = #{deptNo}
+	 </if>
+	 <if test="subjCd != null and subjCd != ''">  
+		AND B.SUBJ_CD = #{subjCd} 					 									-- 학과구분(1343)   
+ 	 </if>
+	 <if test="psncpaSeCd != null and psncpaSeCd != ''">
+		AND B.PSNCPA_SE_CD = #{psncpaSeCd}												-- 정원구분(4320)
+	 </if>
+	 	AND A.SKNRGS_CHANGE_DE BETWEEN NVL(#{sknrgsChangeDeSta}, '00010101') AND NVL(#{sknrgsChangeDeEnd}, '99991231') -- 일자가 NULL이 아니면 선택한 값, 아닌 경우 01년1월1일부터 9999년12월31일까지
+	 
+		ORDER BY B.DEPT_NO, B.STDNO
+	</select>
+
+=================================================================================
+#// SELECT 절에 사용한 별칭을 WHERE 조건에서 사용하면 안됨
+=================================================================================
