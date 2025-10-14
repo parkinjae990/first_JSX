@@ -1,0 +1,18 @@
+SELECT  SBJECT_CD           						                    -- 과목코드
+		      , SBJECT_NM 		                                        -- 교과목명
+		      , SBJECT_ENG_NM                                           -- 교과목명_영문
+		      , PNT                                                     -- 학점
+		      , PRCTICE_CD                                              -- 실습과목코드(2190)
+		      , LCTRE_TIME                                              -- 이론시수 (이론 수업의 주당 강의 시간)
+		      , PRCTICE_TIME                                            -- 실습시수 (실습 수업의 주당 강의 시간)
+		      , UF_CMM_DEPTNM(CHRG_DEPT_NO) AS CHRG_DEPT_NM             -- 담당학과명
+		      , CHRG_DEPT_NO                                            -- 담당학과코드
+		      , ESTBL_YEAR                                              -- 개설년도
+		      , ESTBL_SEMSTR_CD                                         -- 개설학기코드(2180)
+		       , UF_CMM_UCODENM(ESTBL_SEMSTR_CD) AS ESTBL_SEMSTR_NM     -- 개설학기명(2180)
+		      , DSUSE_YEAR	                                            -- 페기년도
+		      , DSUSE_SEMSTR_CD	                                        -- 패기학기코드(2180)
+		      , USE_AT                                                  -- 사용여부 
+		      , GRAD_SE_CD   										    -- 등급구분코드(2210)
+      		  , MANAGE_SE_CD 										    -- 관리구분코드(2195)
+      		  , SBJECT_DC											    -- 교과목설명

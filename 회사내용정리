@@ -577,3 +577,27 @@ G:deptNm
 
 # 해당 타입에서 소계 설정
 dataset.getRowLevel(currow) == 1 ? deptNm+ ' 소계' : deptNm
+
+
+=================================================================================
+# // 오라클, mybatis에서 like 쓸 때 정리 
+=================================================================================
+<if test="sbjectNm != null and sbjectNm != '' ">
+	AND SBJECT_NM LIKE '%' || #{sbjectNm} || '%'
+</if>
+
+# 연결 연산자 ||를 사용하도록 권장된다. 
+
+=================================================================================
+# // 컴포넌트 크기 조절(resize)
+=================================================================================
+
+// 컴포넌트 크기 조절
+	// resize 적용할 때, top과 botom 값 둘 다 가지면 안되고 top이나 bottom 중 하나의 값만 가져야함
+	this.gfn_setResizable([
+		{
+			preComp   : this.grd_list,
+			postComp  : this.div_resize, // div_resize 자체를 넘겨야 함 
+			direction : "vertical" //vertical : 세로, horizontal : 가로
+		}
+	]);
