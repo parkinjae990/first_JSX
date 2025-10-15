@@ -592,16 +592,15 @@ dataset.getRowLevel(currow) == 1 ? deptNm+ ' 소계' : deptNm
 # // 컴포넌트 크기 조절(resize)
 =================================================================================
 
-// 컴포넌트 크기 조절
+	// 컴포넌트 크기 조절
 	// resize 적용할 때, top과 botom 값 둘 다 가지면 안되고 top이나 bottom 중 하나의 값만 가져야함
 	this.gfn_setResizable([
 		{
 			preComp   : this.grd_list,
-			postComp  : this.div_resize, // div_resize 자체를 넘겨야 함 
-			direction : "vertical" //vertical : 세로, horizontal : 가로
+			postComp  : this.div_resize, 	// div_resize 자체를 넘겨야 함 
+			direction : "vertical" 			//vertical : 세로, horizontal : 가로
 		}
 	]);
-
 
 
 =================================================================================
@@ -644,3 +643,139 @@ this.fn_sbjectCdCallback = function (svcid, variant)
 	this.ds_list20.setColumn(this.ds_list20.rowposition,"samenssSbjectNm",variant.sbjectNm);  // 현재 선택된 행의 과목이름을 데이터셋에 담음 
 	this.ds_list20.setColumn(this.ds_list20.rowposition,"samenssPnt"     ,variant.pnt);       // 현재 선택된 행의 학점를 데이터셋에 담음 
 };
+
+
+=================================================================================
+# 전년도 복사
+=================================================================================
+# 작년의 내용을 복사하여, 이번 년도로 붙여넣을 수 있는 방법
+
+#// 쿼리 
+<!-- 전년도 복사 -->
+	<update id="saveCopy" statementType="CALLABLE">
+	{ CALL
+		BEGIN
+			
+	    DELETE FROM TB_ADEV_CORE_ABILITY -- 핵심역량정의
+			 WHERE YEAR				= #{toYear};
+			
+		DELETE FROM TB_ADEV_LWPRT_ABILITY -- 하위역량정의
+			 WHERE YEAR				= #{toYear};
+		
+		DELETE FROM TB_ADEV_CORE_ABILITY_GHVR_IDX -- 행동지표
+			 WHERE YEAR				= #{toYear}; 
+		<!-- 핵심역량정의-->	 
+		INSERT INTO TB_ADEV_CORE_ABILITY (
+				    YEAR                      -- 년도
+				  , CORE_ABILITY_CD           -- 핵심역량코드
+				  , CORE_ABILITY_NM           -- 핵심역량명
+				  , CORE_ABILITY_NM_ENG       -- 핵심역량명_영문
+				  , CORE_ABILITY_ABRV         -- 핵심역량약어
+				  , CLTR_FRMTN_DFN            -- 핵심역량정의
+				  , SORT_ORDR				  -- 정렬순서
+	              , INP_ID          		  -- 생성자
+	              , INP_DT            		  -- 생성일시
+	              , INP_IP            		  -- 생성IP
+	              , INP_PRGM          		  -- 생성프로그램
+				)
+			  SELECT 
+			        #{toYear}
+				  , CORE_ABILITY_CD     
+				  , CORE_ABILITY_NM     
+				  , CORE_ABILITY_NM_ENG 
+				  , CORE_ABILITY_ABRV   
+				  , CLTR_FRMTN_DFN      
+				  , SORT_ORDR			
+			      , #{_userSession_.loginId}
+			      , SYSDATE
+			      , #{_userSession_.connectIp}
+			      , #{_program_.prgmUrl}
+			   FROM TB_ADEV_CORE_ABILITY
+			  WHERE YEAR			= #{fromYear};
+			  
+		
+		<!-- 하위역량정의-->
+		INSERT INTO TB_ADEV_LWPRT_ABILITY (
+				    YEAR  				  -- 년도
+				  , CORE_ABILITY_CD  	  -- 핵심역량코드
+				  , LWPRT_ABILITY_CD  	  -- 핵심역량명
+				  , LWPRT_ABILITY_NM  	  -- 핵심역량명_영문
+				  , LWPRT_ABILITY_NM_ENG  -- 핵심역량약어
+				  , LWPRT_ABILITY_ABRV    -- 핵심역량정의
+				  , LWPRT_ABILITY_DFN     -- 정렬순서
+				  ,	ALLOT				  -- 배점
+				  , SORT_ORDR             -- 정렬순서
+				  , USE_AT                -- 사용여부
+	              , INP_ID          	  -- 생성자
+	              , INP_DT            	  -- 생성일시
+	              , INP_IP            	  -- 생성IP
+	              , INP_PRGM          	  -- 생성프로그램
+				)
+			  SELECT 
+			        #{toYear}
+				  , CORE_ABILITY_CD  	 
+				  , LWPRT_ABILITY_CD  	 
+				  , LWPRT_ABILITY_NM  	 
+				  , LWPRT_ABILITY_NM_ENG 
+				  , LWPRT_ABILITY_ABRV   
+				  , LWPRT_ABILITY_DFN    
+				  , ALLOT				 
+				  , SORT_ORDR           
+				  , USE_AT                	
+			      , #{_userSession_.loginId}
+			      , SYSDATE
+			      , #{_userSession_.connectIp}
+			      , #{_program_.prgmUrl}
+			   FROM TB_ADEV_LWPRT_ABILITY
+			  WHERE YEAR			= #{fromYear};	 
+			  
+			   
+		
+		INSERT INTO TB_ADEV_CORE_ABILITY_GHVR_IDX (
+				    YEAR 				-- 년도
+				  , CORE_ABILITY_CD 	-- 핵심역량코드
+				  , LWPRT_ABILITY_CD 	-- 하위역량코드
+				  , SN 					-- 순번문
+				  , COMPOSITION_FACTOR 	-- 구성요소
+				  , GHVR_IX_CASE 		-- 행동지표
+				  , SORT_ORDR 			-- 정렬순서
+	              , INP_ID          	-- 생성자
+	              , INP_DT            	-- 생성일시
+	              , INP_IP            	-- 생성IP
+	              , INP_PRGM          	-- 생성프로그램
+				)
+			  SELECT 
+			        #{toYear}
+				  , CORE_ABILITY_CD 	
+				  , LWPRT_ABILITY_CD 	
+				  , SN 					
+				  , COMPOSITION_FACTOR 
+				  , GHVR_IX_CASE 		
+				  , SORT_ORDR 			
+			      , #{_userSession_.loginId}
+			      , SYSDATE
+			      , #{_userSession_.connectIp}
+			      , #{_program_.prgmUrl}
+			   FROM TB_ADEV_CORE_ABILITY_GHVR_IDX
+			  WHERE YEAR			= #{fromYear};	 	
+		END
+		} 
+	  </update>  
+
+# 넥사크로 스크립트 전년도 복사 설정 
+	// 전년도 복사 버튼 설정 
+	var buttons = [	
+		{
+			id : "copy",				// 버튼 아이디
+			text : "전년도복사",			//버튼 TEXT
+			cssClass : "btn_WF_Common",		//버튼 css
+			execFunc : "fn_copy"			// 버튼 클릭시, 호출할 함수
+		},
+	];		
+	this.gfn_commonButtonMapping(buttons);
+
+=================================================================================
+# 그리드 3가지로 이루어지고 grd_list01, grd_list02, grd_list03이 각각의 상관관계를 가지는 경우
+=================================================================================
+#	핵심역량코드관리 :: HAK_GYOG_0030_M00
+# 상위 - 중간 - 하위 그리드의 구조에서는 각각 아래 구조에 데이터가 있을 경우에는 상위 그리드에서 삭제할 수 없다.
