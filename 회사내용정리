@@ -592,16 +592,34 @@ dataset.getRowLevel(currow) == 1 ? deptNm+ ' 소계' : deptNm
 # // 컴포넌트 크기 조절(resize)
 =================================================================================
 
+# DIV 안에 grid가 존재할 경우 resize 적용할 때
+# 2가지로 분할해서 생각해야함 
+1. div끼리 resize 적용 
+
+	# Div 안에 Grid가 있는 구조에서 리사이즈를 적용할 때, 
+	# resize 바가 생성되는 컴포넌트(Div)들은 top과 bottom을 모두 주거나, 
+	# top 또는 bottom 하나와 height를 주되, 그 height를 주거나, 다른 컴포넌트에 의해 조절될 수 있는 형태로 구성해야한다.
+
+2. div 내부의 그리드의 bottom을 0을 주어서, resize로 크기 조절을 해도 그리드가 항상 div의 하단에 붙도록 설정 
+	# Div 내부의 Grid는 top, bottom, left, right를 모두 지정하고 
+	#bottom="0"을 주면, Div의 크기가 변경될 때 Grid도 Div의 영역을 벗어나지 않고 자동으로 크기가 조절
+
+
+
 	// 컴포넌트 크기 조절
 	// resize 적용할 때, top과 botom 값 둘 다 가지면 안되고 top이나 bottom 중 하나의 값만 가져야함
 	this.gfn_setResizable([
 		{
-			preComp   : this.grd_list,
-			postComp  : this.div_resize, 	// div_resize 자체를 넘겨야 함 
+			preComp	  : this.div_resize10,
+			postComp  : this.div_resize00,
+			direction : "vertical" 			//vertical : 세로, horizontal : 가로
+		},
+		{
+			preComp	  : this.div_resize00.form.div_resize20,
+			postComp  : this.div_resize00.form.div_resize30,
 			direction : "vertical" 			//vertical : 세로, horizontal : 가로
 		}
 	]);
-
 
 =================================================================================
 # 그리드 내부의 expandshow 설정 방법
