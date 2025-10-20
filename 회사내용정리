@@ -395,7 +395,7 @@ this.div_search.form.cmb_hakgi.set_value(this.gfn_getOrigSchdulInfo("DORM_20").h
 =================================================================================
 #//중복체크하는 로직 (넥사크로, mapper)
 =================================================================================
-# 해당 로직은 EAGLE.RCPCODEM에서 rcpCode가 일치하는 내용을 찾아서 개수를 셈 
+# 1. 해당 로직은 EAGLE.RCPCODEM에서 rcpCode가 일치하는 내용을 찾아서 개수를 셈 
 1) mapper 내부 쿼리 
 <select id="selectDuplicCheck" resultType="resultData">
     SELECT COUNT(*)
@@ -438,6 +438,21 @@ this.fn_save = function()
     });
 
 }
+
+# 보훈 장학에서 중복 체크 mapper
+# 한 사람이 한 학기에 한 번 받을 수 있음 
+	<!--보훈장학신청자관리 중복체크-->
+	<select id="selectDuplCheck" resultType="Integer">
+		SELECT  COUNT(*)
+		FROM    TH_JANG_RWDMRT_TRGTER_REQST
+		WHERE   1 = 1
+		AND		STDNO 			= #{stdno}
+		AND		REQST_YEAR		= #{reqstYear}
+		AND		REQST_SEMSTR_CD	= #{reqstSemstrCd}
+	</select> 
+
+
+
 
 =================================================================================
 #//화면 UI에서 달력 사이 "~"의 넓이와 간격
@@ -797,3 +812,65 @@ this.fn_sbjectCdCallback = function (svcid, variant)
 =================================================================================
 #	핵심역량코드관리 :: HAK_GYOG_0030_M00
 # 상위 - 중간 - 하위 그리드의 구조에서는 각각 아래 구조에 데이터가 있을 경우에는 상위 그리드에서 삭제할 수 없다.
+
+
+
+=================================================================================
+# 코드 매핑 （ 비동기）의 진행 순서 정하기 
+=================================================================================
+# 비동기의 경우 동작 순서로 인해서 값을 못 받아올 수 있기 때문에, 우선 순위를 매핑 후 콜백 함수를 통해서 
+# 콜백 함수 내에서 다시 매핑을 진행 함 
+
+# 매핑 후 콜백함수 내부에서 다시 매핑하여 순서를 정해줌
+this.fn_setCode = function(){
+	this.div_search.form.spn_year.set_value(GFN.getToday().substr(0, 4));
+
+    // 1. 첫 번째 매핑: 독립적으로 실행 가능한 조회조건 콤보박스 먼저 설정
+    var searchCodeMappings = [
+        { // 조회조건 > 신청학기
+            objComp: this.div_search.form.cmb_semstrCd,
+            codeId: "2895",
+        }
+    ];
+
+    // 첫 번째 매핑을 실행하고, 완료되면 콜백 함수를 실행
+    this.gfn_commonCodeMapping(searchCodeMappings, function() {
+        // 2. 첫 번째 매핑의 콜백 함수 내부
+        // 이 시점에는 cmb_semstrCd에 값이 설정되었고, ds_in에도 바인딩되었음이 보장됩니다.
+        
+        // 이제 안전하게 ds_in의 값을 가져올 수 있습니다.
+        var year = this.ds_in.getColumn(0, "year");
+        var semstrCd = this.ds_in.getColumn(0, "semstrCd");
+
+        // 3. 두 번째 매핑: 첫 번째 매핑이 완료된 후, 그 결과값을 사용하여 그리드 콤보 설정
+        var gridCodeMappings = [
+            { // 그리드 > 이름 프롬프트
+                objComp: this.grd_list,
+                cellName: "stdno",
+            },
+            { // 학번에 맞는 이름을 반환해줌
+                objComp: this.grd_list,
+                sController: ComService.$.CONTROLLER,
+                nameSpace: "HakGyoj4010Mapper",
+                sqlId: "selectName",
+                args: ["year=" + year, "semstrCd=" + semstrCd],
+                cellName: "stdno",
+                codecolumn: "cd",
+                datacolumn: "nm",
+            }
+        ];
+
+        // 두 번째 매핑을 실행하고, 이 작업까지 모두 완료되면 최종적으로 fn_search()를 호출
+        this.gfn_commonCodeMapping(gridCodeMappings, function() {
+            // 4. 모든 설정이 완료된 후 최종적으로 검색 실행
+            this.fn_search();
+			trace()
+        });
+    });
+};
+
+# 데이터셋의 데이터가 바뀔 때마다 fn_setCode()를 통해서 함수를 다시 실행하여, mapper에 만족하는 데이터를 꺼낼 수 있게 설정함 
+this.ds_in_cancolumnchange = function(obj:nexacro.NormalDataset,e:nexacro.DSColChangeEventInfo)
+{
+	this.fn_setCode();
+};
