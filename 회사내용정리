@@ -816,7 +816,7 @@ this.fn_sbjectCdCallback = function (svcid, variant)
 
 
 =================================================================================
-# 코드 매핑 （ 비동기）의 진행 순서 정하기 
+# 코드 매핑 （ 비동기）의 진행 순서 정하기            >>>>>>>>>>>>>>>>>>>>>>>                       NEIS등록관리 :: HAK_GYOJ_4010_M00
 =================================================================================
 # 비동기의 경우 동작 순서로 인해서 값을 못 받아올 수 있기 때문에, 우선 순위를 매핑 후 콜백 함수를 통해서 
 # 콜백 함수 내에서 다시 매핑을 진행 함 
@@ -873,4 +873,73 @@ this.fn_setCode = function(){
 this.ds_in_cancolumnchange = function(obj:nexacro.NormalDataset,e:nexacro.DSColChangeEventInfo)
 {
 	this.fn_setCode();
+};
+
+
+
+=================================================================================
+# insert문에서, 기본키이며, type이 number인 값을 넣을때
+=================================================================================
+
+# 화면에서 기본키를 보여주지 않으며, 값을 직접 입력할 수 없는 상황에서 insert 문을 작성해야하는 경우의 쿼리 
+
+<insert id= "insert"> 
+	INSERT INTO(  STDNO
+				, SN
+			   )
+		VALUES (
+				# {stdno}
+				, (
+					SELECT NVL(MAX(SN),0)+1 
+					FROM TH_HAKJ_STATE_UPDT 
+					WHERE STDNO = #{stdno}
+				  )
+			   )
+</insert>
+
+
+=================================================================================
+# spin이벤트에서, 값을 바꿀시, 자동 조회 설정 
+=================================================================================
+
+# spin 컴포넌트 이벤트
+this.div_search_spn_year_onspin = function(obj:nexacro.Spin,e:nexacro.SpinEventInfo)
+{
+	# // obj :: 이벤트가 발생한 대상 컴포넌트를 의미함
+	# //e :: 이벤트에 대한 상세 정보를 담고 있는 변수
+	this.fn_search(e.postvalue); //  스핀 버튼을 눌렀을 때, 변경된 이후의 값
+};
+
+#fn_search()문 수정
+# 기존의 fn_search에서 매개변수와 if문으로 넘어온 파라미터를 검색조건 데이터셋에 설정 
+# 기존 search문에서 바뀐 부분 
+# 1. function() >>  function(sYear)
+# 2. fn_search문 내부에 if문 설정 
+this.fn_search = function (sYear) {
+	
+	// 넘어온 파라미터가 있으면 검색조건 데이터셋에 설정
+	if (sYear) {
+		this.ds_in.setColumn(this.ds_in.rowposition, "year", sYear);
+	}
+	
+	this.gfn_confirmSave(this.ds_list, function() {
+		this.gfn_setGridReset([this.grd_list]);
+		var oData = {
+			sController : ComService.$.CONTROLLER,
+			svcid : "search",
+			svcList : [
+				{
+					action	  : ComService.$.SEARCH,
+					nameSpace : "Admbuma0060Mapper",
+					sqlId	  : "selectList",
+					inds	  : "ds_in",
+					outds	  : "ds_list"
+				}
+			]
+		};
+		ComService.doAction(this, oData).then(function(form ,e) {
+			form.gfn_setStatus("search", form.ds_list.rowcount);
+			form.gfn_goSavePos(form.grd_list);
+		});
+	});
 };
