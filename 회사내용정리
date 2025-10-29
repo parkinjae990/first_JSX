@@ -1,3 +1,12 @@
+=================================================================================
+#//넥사크로 커밋 전 검토해야할 내용 
+
+
+# 1. 탭오더
+# 2. trace 확인 
+
+=================================================================================
+
 기본 CRUD (넥사크로 버전)
 
 
@@ -952,3 +961,47 @@ this.fn_search = function (sYear) {
 =================================================================================
 this.ds_list.rowposition >> 데이터셋에서 현재 선택된 행의 인덱스 번호를 반환하거나 설정하는 속성
 
+
+=================================================================================
+# 주소 컴포넌트(시/도 , 구/군)가 서로 영향이 있을 때 사용하는 함수 
+# 체인콤보
+=================================================================================
+# 아래 예시는 setCode에서 시/도에 따라서, 구/군이 정해질 때, 체인 콤보를 활용해서 엮는 것을 볼 수 있다. 
+this.fn_setCode = function()
+{
+
+	var codeMappings = [
+	/*-------------------------div_search---------------------------*/
+		{ // 시도코드(1560)
+			objComp     : this.div_search.form.cmb_ctprvnCd,
+			codeId      : "1560",
+			promptType  : "A",	
+		},
+		{ // 구군코드(1570)
+			objComp     : this.div_search.form.cmb_guGunCd,
+			codeId      : "1570",
+			promptType  : "A",	
+		},
+		{ // 학적상태(2040)
+			objComp     : this.div_search.form.cmb_sclpstSttusCd,
+			codeId      : "2040",
+			promptType  : "A",	
+		},
+	];
+	this.gfn_commonCodeMapping(codeMappings, {
+		// 시,군 구분 체인콤보
+		svid : "chainCombo",
+		cfn  : "chainCombo",
+		setChain : function(form, e){
+			#//체인콤보 설정   메인 :: (메인이 될 시/도)
+			var rootChain = form.comboManager.createComboChain({
+				comp   : form.div_search.form.cmb_ctprvnCd
+			});	#// 		 서브 :: (시/도에 따라 값이 바뀌는 구/군)
+			var subChain = rootChain.setNext({
+				comp   : form.div_search.form.cmb_guGunCd,
+				filter : "pre.ucode==extraCode1"
+			}); 
+		}
+		}, function(){
+	});	
+};
