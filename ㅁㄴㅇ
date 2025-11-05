@@ -1,54 +1,66 @@
-	<select id="selectList" resultType="resultData">
-        SELECT A.YEAR					                                              -- 년도
-             , A.SEMSTR_CD                                                  -- 학기(2180)
-             , B.STDNO                                                      -- 학번
-             , B.KOR_NM                                                     -- 성명_한글
-             , B.GRADE_CD				                                            -- 학년
-             , UF_CMM_UCODENM(B.GRADE_CD) AS GRADE_CD_NM
-             , B.BAN                                                        -- 반
-             , B.SCLPST_STTUS_CD                                            -- 학적상태코드 (2040)
-             , UF_CMM_UCODENM(B.SCLPST_STTUS_CD) AS SCLPST_STTUS_CD_NM
-             , A.COMPL_SE_CD                                                -- 이수구분코드(2340)
-             , UF_CMM_UCODENM(A.COMPL_SE_CD) AS COMPL_SE_CD_NM
-             , A.SBJECT_CD                                                  -- 과목코드
-             , UF_GYOG_SBJECT_NM_GET(A.SBJECT_CD) AS SBJECT_NM              -- 교과목명
-             , A.CRCLM_ATNLC_BAN                                            -- 교과과정수강반
-             , C.CHRG_PROFSR_NO      	                                      -- 담당교수코드
-             , UF_CMM_USERNM_EMPNO(C.CHRG_PROFSR_NO) AS CHRG_PROFSR_NO_NM
-             , A.PNT                                                        -- 학점
-             , A.ATNLC_SE_CD                                                -- 수강구분코드(2650)
-             , UF_CMM_UCODENM(A.ATNLC_SE_CD) AS ATNLC_SE_CD_NM
-             , A.WTHDRAW_AT                                                 -- 철회여부
-             , A.WTHDRAW_DE                                                 -- 철회일자
-             , A.WTHDRAW_RESN                                               -- 철회사유
-             , A.WTHDRAW_STTUS_CD                                           -- 철회처리상태코드(2300)
-             , A.WTHDRAW_CONFM_DE                                           -- 철회승인일자
-             , A.WTHDRAW_CONFMER                                            -- 철회승인자
-             , UF_CMM_USERNM_EMPNO(A.WTHDRAW_CONFMER) AS WTHDRAW_CONFMER_NM
-        FROM TH_SUGA_ATNLC_REQST A
-           , TH_HAKJ_M B
-           , TH_SUUP_ESTBL_LCTRE C
-        WHERE A.STDNO = B.STDNO
-          AND A.YEAR = C.YEAR (+)
-          AND A.SEMSTR_CD = C.SEMSTR_CD (+)
-          AND A.SBJECT_CD = C.SBJECT_CD (+)
-          AND A.CRCLM_DEPT_NO = C.DEPT_NO (+)
-          AND A.CRCLM_GRADE_CD = C.CRCLM_GRADE_CD (+)
-          AND A.CRCLM_ATNLC_BAN = C.ATNLC_BAN (+)
-          AND A.WTHDRAW_AT = 'Y'
-          AND A.YEAR = #{year}
-          AND A.SEMSTR_CD = #{semstrCd}
-        <if test="gradeCd != null and gradeCd != ''">
-          AND B.GRADE_CD = #{gradeCd}
-        </if>
-        <if test="wthdrawSttusCd != null and wthdrawSttusCd != ''">
-          AND A.WTHDRAW_STTUS_CD = #{wthdrawSttusCd}
-        </if>
-        <if test="deptNo != null and deptNo != ''">
-          AND B.DEPT_NO = #{deptNo}
-        </if>
-        <if test="stdno != null and stdno != ''">	 	
-          AND (B.STDNO = #{stdno} OR B.KOR_NM LIKE '%' || #{stdno} || '%'  )
-        </if>
-        ORDER BY WTHDRAW_DE DESC
-    </select>
+LEFT OUTER JOIN (
+				 SELECT   A.YEAR
+						, A.SEMSTR_CD
+						, A.DEPT_NO
+						, A.SBJECT_CD
+						, A.GRADE_CD
+						, A.CLSS
+						, LISTAGG(A.LECTURE_TIME, ',') WITHIN GROUP(ORDER BY A.WEEK_CD, A.DGHT_SE_CD, A.TIME_FR) AS LECTURE_TIME
+						, LISTAGG(B.BULD_NM||' '||A.LCTRUM_CD, ', ') WITHIN GROUP(ORDER BY A.WEEK_CD, A.DGHT_SE_CD, A.TIME_FR) AS LCTRUM
+				FROM (
+						SELECT YEAR
+								, SEMSTR_CD
+								, DEPT_NO
+								, SBJECT_CD
+								, GRADE_CD
+								, CLSS
+								, WEEK_CD
+								, DGHT_SE_CD
+								, TIME_FR
+								, CASE WHEN TIME_FR = TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
+									WHEN TIME_FR != TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '~' ||TIME_TO || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
+									END AS LECTURE_TIME
+								, BULD_CD
+								, LCTRUM_CD
+						FROM TH_SUUP_ESTBL_LCTRE_TIME
+						
+						UNION ALL
+						
+						SELECT YEAR
+								, SEMSTR_CD
+								, DEPT_NO
+								, SBJECT_CD
+								, GRADE_CD
+								, CLSS
+								, WEEK_CD
+								, DGHT_SE_CD
+								, TIME_FR
+								, CASE WHEN TIME_FR = TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
+									WHEN TIME_FR != TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '~' ||TIME_TO || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
+									END AS LECTURE_TIME
+								, BULD_CD
+								, LCTRUM_CD
+						FROM TH_SUUP_ESTBL_LCTRE_REMOTE		--원격
+						
+						UNION ALL
+
+						SELECT YEAR
+							,SEMSTR_CD
+							,DEPT_NO
+							,GRADE_CD
+							,SBJECT_CD
+							,CLSS
+							,WEEK_CD
+							,DGHT_SE_CD
+							,TIME_FR
+							, CASE WHEN TIME_FR = TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
+									WHEN TIME_FR != TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '~' ||TIME_TO || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
+									END AS LECTURE_TIME
+							, BULD_CD
+							, LCTRUM_CD
+						FROM TH_SUUP_CNCTR_COMPL_TABLE
+					) A
+					LEFT OUTER JOIN TH_SUUP_BULD B
+					ON A.BULD_CD = B.BULD_CD
+				GROUP BY A.YEAR, A.SEMSTR_CD, A.DEPT_NO, A.SBJECT_CD, A.GRADE_CD, A.CLSS
+				) E  -- 강의시간
