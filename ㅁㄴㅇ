@@ -1,66 +1,166 @@
-LEFT OUTER JOIN (
-				 SELECT   A.YEAR
-						, A.SEMSTR_CD
-						, A.DEPT_NO
-						, A.SBJECT_CD
-						, A.GRADE_CD
-						, A.CLSS
-						, LISTAGG(A.LECTURE_TIME, ',') WITHIN GROUP(ORDER BY A.WEEK_CD, A.DGHT_SE_CD, A.TIME_FR) AS LECTURE_TIME
-						, LISTAGG(B.BULD_NM||' '||A.LCTRUM_CD, ', ') WITHIN GROUP(ORDER BY A.WEEK_CD, A.DGHT_SE_CD, A.TIME_FR) AS LCTRUM
-				FROM (
-						SELECT YEAR
-								, SEMSTR_CD
-								, DEPT_NO
-								, SBJECT_CD
-								, GRADE_CD
-								, CLSS
-								, WEEK_CD
-								, DGHT_SE_CD
-								, TIME_FR
-								, CASE WHEN TIME_FR = TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
-									WHEN TIME_FR != TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '~' ||TIME_TO || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
-									END AS LECTURE_TIME
-								, BULD_CD
-								, LCTRUM_CD
-						FROM TH_SUUP_ESTBL_LCTRE_TIME
-						
-						UNION ALL
-						
-						SELECT YEAR
-								, SEMSTR_CD
-								, DEPT_NO
-								, SBJECT_CD
-								, GRADE_CD
-								, CLSS
-								, WEEK_CD
-								, DGHT_SE_CD
-								, TIME_FR
-								, CASE WHEN TIME_FR = TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
-									WHEN TIME_FR != TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '~' ||TIME_TO || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
-									END AS LECTURE_TIME
-								, BULD_CD
-								, LCTRUM_CD
-						FROM TH_SUUP_ESTBL_LCTRE_REMOTE		--원격
-						
-						UNION ALL
+	        <!-- 6. 강의계획서 학습목표 -->
+	        DELETE FROM TH_GYOG_LCTRE_ACTPLN_LRN_GOAL 
+			WHERE YEAR = #{year} 
+			AND SEMSTR_CD = #{semstrCd} 
+			AND DEPT_NO = #{deptNo} 
+			AND SBJECT_CD = #{sbjectCd} 
+			AND ATNLC_BAN = #{atnlcBan};
 
-						SELECT YEAR
-							,SEMSTR_CD
-							,DEPT_NO
-							,GRADE_CD
-							,SBJECT_CD
-							,CLSS
-							,WEEK_CD
-							,DGHT_SE_CD
-							,TIME_FR
-							, CASE WHEN TIME_FR = TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
-									WHEN TIME_FR != TIME_TO THEN UF_CMM_UCODENM(WEEK_CD) || ' ' || TIME_FR || '~' ||TIME_TO || '(' || UF_CMM_UCODENM(DGHT_SE_CD) || ')'
-									END AS LECTURE_TIME
-							, BULD_CD
-							, LCTRUM_CD
-						FROM TH_SUUP_CNCTR_COMPL_TABLE
-					) A
-					LEFT OUTER JOIN TH_SUUP_BULD B
-					ON A.BULD_CD = B.BULD_CD
-				GROUP BY A.YEAR, A.SEMSTR_CD, A.DEPT_NO, A.SBJECT_CD, A.GRADE_CD, A.CLSS
-				) E  -- 강의시간
+	        INSERT INTO TH_GYOG_LCTRE_ACTPLN_LRN_GOAL (
+					  YEAR
+					  SEMSTR_CD
+					  DEPT_NO
+					  SBJECT_CD
+					  ATNLC_BAN
+					  SN
+					  KNWLDG_AT
+					  TCHNLGY_AT
+					  ATITD_AT
+					  LRN_GOAL
+					  INP_ID
+					  INP_DT
+					  INP_IP
+					  INP_PRGM
+	        ) SELECT  #{year}
+					, #{semstrCd}
+					, #{deptNo}
+					, #{sbjectCd}
+					, #{atnlcBan}
+					, SN
+					, KNWLDG_AT
+					, TCHNLGY_AT
+					, ATITD_AT
+					, LRN_GOAL
+					, #{_userSession_.loginId}
+					, SYSDATE
+					, #{_userSession_.connectIp}
+					, #{_program_.prgmUrl}
+	        FROM TH_GYOG_LCTRE_ACTPLN_LRN_GOAL 
+			WHERE YEAR = #{cpyYear} 
+			AND SEMSTR_CD = #{cpySemstrCd} 
+			AND DEPT_NO = #{cpyDeptNo} 
+			AND SBJECT_CD = #{cpySbjectCd} 
+			AND ATNLC_BAN = #{cpyAtnlcBan};
+	
+	        <!-- 7. 강의계획서 간호학과 PO 정보 -->
+	        DELETE FROM TH_GYOG_LCTRE_ACTPLN_NRS_DEPT_PO 
+			WHERE YEAR = #{year} 
+			AND SEMSTR_CD = #{semstrCd} 
+			AND DEPT_NO = #{deptNo} 
+			AND SBJECT_CD = #{sbjectCd} 
+			AND ATNLC_BAN = #{atnlcBan};
+
+	        INSERT INTO TH_GYOG_LCTRE_ACTPLN_NRS_DEPT_PO (
+					  YEAR
+					  SEMSTR_CD
+					  DEPT_NO
+					  SBJECT_CD
+					  ATNLC_BAN
+					  PO_CD
+					  INP_ID
+					  INP_DT
+					  INP_IP
+					  INP_PRGM
+	        ) SELECT  #{year}
+					, #{semstrCd}
+					, #{deptNo}
+					, #{sbjectCd}
+					, #{atnlcBan}
+					, PO_CD
+					, #{_userSession_.loginId}
+					, SYSDATE
+					, #{_userSession_.connectIp}
+					, #{_program_.prgmUrl}
+	        FROM TH_GYOG_LCTRE_ACTPLN_NRS_DEPT_PO 
+			WHERE YEAR = #{cpyYear} 
+			AND SEMSTR_CD = #{cpySemstrCd} 
+			AND DEPT_NO = #{cpyDeptNo} 
+			AND SBJECT_CD = #{cpySbjectCd} 
+			AND ATNLC_BAN = #{cpyAtnlcBan};
+	
+	        <!-- 8. 강의계획서 교과개요  -->
+	        DELETE FROM TH_GYOG_LCTRE_ACTPLN_SUMRY 
+			WHERE YEAR = #{year} 
+			AND SEMSTR_CD = #{semstrCd} 
+			AND DEPT_NO = #{deptNo} 
+			AND SBJECT_CD = #{sbjectCd} 
+			AND ATNLC_BAN = #{atnlcBan};
+
+	        INSERT INTO TH_GYOG_LCTRE_ACTPLN_SUMRY (
+					  YEAR
+					  SEMSTR_CD
+					  DEPT_NO
+					  SBJECT_CD
+					  ATNLC_BAN
+					  LESSON_TY_CD
+					  BEFORE_COMPL_ESSNTL
+					  BEFORE_COMPL_RELATE
+					  BEFORE_COMPL_AT
+					  INP_ID
+					  INP_DT
+					  INP_IP
+					  INP_PRGM
+	        ) SELECT  #{year}
+					, #{semstrCd}
+					, #{deptNo}
+					, #{sbjectCd}
+					, #{atnlcBan}
+					, LESSON_TY_CD
+					, BEFORE_COMPL_ESSNTL
+					, BEFORE_COMPL_RELATE
+					, BEFORE_COMPL_AT
+					, #{_userSession_.loginId}
+					, SYSDATE
+					, #{_userSession_.connectIp}
+					, #{_program_.prgmUrl}
+	        FROM TH_GYOG_LCTRE_ACTPLN_SUMRY 
+			WHERE YEAR = #{cpyYear} 
+			AND SEMSTR_CD = #{cpySemstrCd} 
+			AND DEPT_NO = #{cpyDeptNo} 
+			AND SBJECT_CD = #{cpySbjectCd} 
+			AND ATNLC_BAN = #{cpyAtnlcBan};
+	
+	        <!-- 9. 강의계획서 수업자료(교재) -->
+	        DELETE FROM TH_GYOG_LCTRE_ACTPLN_TCHMTR 
+			WHERE YEAR = #{year} 
+			AND SEMSTR_CD = #{semstrCd} 
+			AND DEPT_NO = #{deptNo} 
+			AND SBJECT_CD = #{sbjectCd} 
+			AND ATNLC_BAN = #{atnlcBan};
+
+	        INSERT INTO TH_GYOG_LCTRE_ACTPLN_TCHMTR (
+					  YEAR
+					  SEMSTR_CD
+					  DEPT_NO
+					  SBJECT_CD
+					  ATNLC_BAN
+					  SN
+					  TCHMTR_TY_CD
+					  TCHMTR
+					  AUTHR
+					  PLSCMPN
+					  PBLCATE_YEAR
+					  INP_ID
+					  INP_DT
+					  INP_IP
+					  INP_PRGM
+	        ) SELECT  #{year}
+			, #{semstrCd}
+			, #{deptNo}
+			, #{sbjectCd}
+			, #{atnlcBan}
+			, SN
+			, TCHMTR_TY_CD
+			, TCHMTR, AUTHR
+			, PLSCMPN
+			, PBLCATE_YEAR
+			, #{_userSession_.loginId}
+			, SYSDATE
+			, #{_userSession_.connectIp}
+			, #{_program_.prgmUrl}
+	        FROM TH_GYOG_LCTRE_ACTPLN_TCHMTR
+			WHERE YEAR = #{cpyYear} 
+			AND SEMSTR_CD = #{cpySemstrCd} 
+			AND DEPT_NO = #{cpyDeptNo} 
+			AND SBJECT_CD = #{cpySbjectCd} 
+			AND ATNLC_BAN = #{cpyAtnlcBan};
