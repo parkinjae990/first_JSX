@@ -1029,3 +1029,43 @@ this.fn_setCode = function()
 
 # // 그리드에 삼항연산자의 조건을 통해, 만족하는 데이터만 CSS를 적용한다고 가정
 # * 특이사항 :: 그리드의 displayType이 editControl의 경우, 삼항연산자의 식과 충돌하여서, 데이터가 나오지 않을 수 있다. 
+
+
+=================================================================================
+#// fn_delete의 2가지 방식 
+=================================================================================
+
+/*선택된 행을 삭제하는 로직*/
+	this.gfn_deleteRow(this.ds_list, function (oData) {	// 선택된 행만 삭제 
+		oData.sController = ComService.$.CONTROLLER;
+		oData.svcList = [
+			{
+				action	  : ComService.$.DELETE, 
+				nameSpace : "HakGyog3030Mapper",
+				sqlId	  : "deleteTab01",
+				inds	  : "ds_list:U"				// 수정된 데이터 
+			}
+		];
+		ComService.doAction(this, oData).then(function(form ,e) {
+			form.gfn_setStatus("delete"); 
+			form.fn_search();
+		});
+	});	
+
+/*현재 화면에서 보이는 데이터는 한 건만 존재하기 때문에 아래 스크립트를 사용해도 괜찮음 */	
+	this.gfn_confirmMsg("삭제하시겠습니까?", function() {	// 전체 데이터 삭제 
+		var oData = {
+		sController : ComService.$.CONTROLLER,
+		svcid : "deleteTab01",
+		svcList : [
+			{
+				action	  : ComService.$.DELETE_ALL,
+				nameSpace : "HakGyog3030Mapper",
+				sqlId	  : "deleteTab01",
+				inds	  : "ds_list"
+			}
+		]};
+		ComService.doAction(this, oData).then(function(form ,e) {
+		this.fn_search();
+		});
+	});
