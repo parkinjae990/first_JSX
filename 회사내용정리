@@ -2,9 +2,9 @@
 #//넥사크로 커밋 전 검토해야할 내용 
 
 
-# 1. 탭오더
+# 1. 탭오더0
 # 2. trace 확인 
-
+# 엑셀
 =================================================================================
 
 기본 CRUD (넥사크로 버전)
@@ -397,8 +397,8 @@ UF_HAK_DEPT_MAJOR_GET() >> 학부 전공명 가져오기
 =================================================================================
 #//공통코드를 사용하여 mapper에서 학번 숫자를 이름으로 바꿀 때 (년도 학기 설정)
 =================================================================================
-this.div_search.form.spn_year.set_value (this.gfn_getOrigSchdulInfo("DORM_20").year);  
-this.div_search.form.cmb_hakgi.set_value(this.gfn_getOrigSchdulInfo("DORM_20").hakgi);
+this.div_search.form.spn_year.set_value (this.gfn_getOrigSchdulInfo("DORM_20").year);   	// 공통 코드 내용 가변적으로 "" 안의 내용은 바뀔 수 있음
+this.div_search.form.cmb_hakgi.set_value(this.gfn_getOrigSchdulInfo("DORM_20").hakgi);    	// 공통 코드 내용 가변적으로 "" 안의 내용은 바뀔 수 있음
 	
 
 =================================================================================
@@ -1069,3 +1069,57 @@ this.fn_setCode = function()
 		this.fn_search();
 		});
 	});
+
+
+=================================================================================
+#// 테이블에 년도, 학기가 없는데 필요한 경우 
+=================================================================================
+# HakRegt5130Mapper
+
+SELECT  UF_CMM_DEPTNM(B.DEPT_NO) AS DEPT_NM		                -- 학과코드
+	  , B.STDNO     							                -- 학번
+	  , B.KOR_NM    							                -- 성명_한글
+	  , UF_CMM_UCODENM(B.GRADE_CD) AS GRADE_CD	                -- 학년
+	  , UF_CMM_UCODENM(B.SCLPST_STTUS_CD) AS SCLPST_STTUS_NM	-- 학적상태코드 (2040)
+	  , UF_CMM_UCODENM(C.REGIST_SE_CD) AS REGIST_SE_NM			-- 등록구분코드(2870)
+	  , NVL(C.PAYAMT_TOT,0) AS PAYAMT_TOT            			-- 납입금계(등록할금액)
+	  , NVL(D.DETAIL_SUM,0) AS DETAIL_SUM            			-- 등록한금액
+	  , NVL(C.PAYAMT_TOT,0) - NVL(D.DETAIL_SUM,0) AS NPY_SUM    -- 미납금액      
+	  , NVL(E.REV_TUTFEE, 0) AS REV_TUTFEE						-- 기납입금액
+	  ----------------기등록내역----------------
+	  , E.YEAR  
+	  , UF_CMM_UCODENM(E.SEMSTR_CD) AS SEMSTR_NM
+	  , UF_CMM_UCODENM(E.GRADE_CD) AS GRADE_NM
+	  ----------------기등록내역----------------
+			  
+FROM 	   TH_HAKJ_CHANGE_REQST_STD A			/*학적변동신청*/
+INNER JOIN TH_HAKJ_M B							/*학적마스터*/
+		ON A.STDNO = B.STDNO   
+		     
+LEFT JOIN TH_REGT_TRGTER_M C  -- 등록대상자
+		ON A.STDNO = C.STDNO
+		AND SUBSTR(A.BKTCL_PREARNGE_DE, 1, 4) = C.YEAR	-- 복학예정일자의 '년도(YYYY)'와 C 테이블의 년도를 비교
+		AND (
+			CASE
+			WHEN SUBSTR(A.BKTCL_PREARNGE_DE, 5, 2) IN ('02', '03') THEN '2180100' -- 1학기
+			WHEN SUBSTR(A.BKTCL_PREARNGE_DE, 5, 2) IN ('08', '09') THEN '2180200' -- 2학기
+			END
+			) = C.SEMSTR_CD							-- 복학예정일자의 '월(MM)'을 기반으로 변환한 학기 코드와 C 테이블의 학기를 비교
+
+#// 밑의 내용은 필요 없기에 삭제 
+
+
+# 해설 
+A 테이블에는 현재 년도, 학기가 존재하지 않음
+그러나, 등록 대상자 테이블과 조인을 걸기 위해서는 년도, 학기가 필요함 
+따라서, 복학예정일자를 이용해  년도와 학기를 구한다. 
+
+# 년도  :: 오라클에서는 인덱스가 0이 아닌 1부터 시작 
+SUBSTR(A.BKTCL_PREARNGE_DE, 1, 4) = C.YEAR	-- 복학예정일자의 '년도(YYYY)'와 C 테이블의 년도를 비교
+
+# 학기 
+CASE
+	WHEN SUBSTR(A.BKTCL_PREARNGE_DE, 5, 2) IN ('02', '03') THEN '2180100' -- 1학기
+	WHEN SUBSTR(A.BKTCL_PREARNGE_DE, 5, 2) IN ('08', '09') THEN '2180200' -- 2학기
+END
+
