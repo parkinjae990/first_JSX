@@ -663,6 +663,9 @@ expandshow="expr:dataset.getRowType(currow) == Dataset.ROWTYPE_INSERT?'show':'hi
 # 그리드에서 팝업을 띄울 칼럼을 선택 후 expandshow 설정 추가
 expandshow="expr:dataset.getRowType(currow) == Dataset.ROWTYPE_INSERT?'show':'hide"
 
+# 그리드에서 추가된 행의 상태일 때만 돋보기 보이게 설정 
+dataset.getRowType(currow) == 2 ? 'show' : 'hide'
+
 # 스크립트
 //onexpanddown > 어떤 셀을 클릭했을 때 발생하는 이벤트
 this.div_resize_grd_list20_onexpanddown = function(obj:nexacro.Grid,e:nexacro.GridMouseEventInfo)
@@ -1123,3 +1126,35 @@ CASE
 	WHEN SUBSTR(A.BKTCL_PREARNGE_DE, 5, 2) IN ('08', '09') THEN '2180200' -- 2학기
 END
 
+
+=================================================================================
+#// UPDATE 쿼리에서 서브 쿼리 사용
+=================================================================================
+UPDATE  TH_GYOG_L=CTRE_ACTPLN_TCHMTR 
+	   SET
+		TCHMTR_TY_CD	 = #{tchmtrTyCd}    	                   -- 교재유형코드(2596)
+		, TCHMTR	     = #{tchmtr}                               -- 교재명
+		, AUTHR	         = #{authr}         	                   -- 저자
+		, PLSCMPN	     = #{plscmpn}                              -- 출판사
+		, PBLCATE_YEAR	 = #{pblcateYear}   	                   -- 출판년도
+		, UPD_ID         = #{_userSession_.loginId}		           -- 수정자
+		, UPD_DT         = SYSDATE                     	           -- 수정일시
+		, UPD_IP         = #{_userSession_.connectIp}  	           -- 수정IP
+		, UPD_PRGM       = #{_program_.prgmUrl}        	           -- 수정 프로그램
+
+	WHERE  YEAR          = #{year}             -- 년도
+		 , SEMSTR_CD     = #{semstrCd}         -- 학기(2180)
+		 , DEPT_NO       = #{deptNo}           -- 학과코드
+		 , SBJECT_CD     = #{sbjectCd}         -- 과목코드
+		 , ATNLC_BAN     = #{atnlcBan}         -- 수강반
+		 , SN            =#{
+	                      	 (                                  
+							  SELECT NVL(MAX(SN), 0) + 1       
+							  FROM TH_GYOG_LCTRE_ACTPLN_TCHMTR 
+							  WHERE YEAR      = #{year}        
+							    AND SEMSTR_CD = #{semstrCd}    
+							    AND DEPT_NO   = #{deptNo}      
+							    AND SBJECT_CD = #{sbjectCd}    
+							    AND ATNLC_BAN = #{atnlcBan}    
+							 )                                  
+						   }				   -- 순번
