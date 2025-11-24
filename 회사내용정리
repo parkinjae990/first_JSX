@@ -1167,3 +1167,77 @@ UPDATE  TH_GYOG_L=CTRE_ACTPLN_TCHMTR
 2. Containing text에 찾을 문자열 설정 
 3. File name patterns에 확장자 생성 
 예시 이미지 ::(images/image.png 화면 확인 )
+
+
+=================================================================================
+#// 다중행 연산자와 단일행 연산자의 차이 
+=================================================================================						   
+# + 와 SUM()의 차이 
+
+1. 하나의 행에 존재하는 데이터를 합칠 때
+
+하나의 행에 존재하는 데이터를 합칠 때에는 +를 사용하여 더한다. 이때, 더하는 데이터에 NULL이 한 개라도 존재하는 순간 + 연산의 결과는 NULL이 되기 때문에, 개별적으로 NVL 처리를 해야한다.
+
+```
+-- 해당 쿼리 
+, (   NVL(SCORE_RATE_01, 0) 
+    + NVL(SCORE_RATE_02, 0) 
+    + NVL(SCORE_RATE_03, 0) 
+    + NVL(SCORE_RATE_04, 0) 
+    + NVL(SCORE_RATE_05, 0) 
+  ) AS TOTAL
+
+```
+
+2. 여러 행에 존재하는 데이터를 합칠 때
+
+여러 행에 존재하는 데이터를 합칠 때에는 집계함수 SUM()을 사용하며, 여러 행을 합치기 때문에, GROUP BY를 작성해야하며, 집계함수는 NULL이 있을경우 자동으로 계산에서 제외하기 때문에, 개별적으로 NVL을 처리할 필요가 없다.
+
+```
+-- 해당 쿼리 
+, SUM(
+      SCORE_RATE_01 
+    + SCORE_RATE_02 
+    + SCORE_RATE_03 
+    + SCORE_RATE_04 
+    + SCORE_RATE_05 
+  ) AS TOTAL
+
+```
+
+
+=================================================================================
+#// 조회조건의 콤보 세팅할 때, 다른 mapper에서, 데이터를 가져와서 세팅할 때, 
+=================================================================================	
+
+
+		{ // 조회조건 > 지원학과
+			objComp : this.div_search.form.cmb_sport1DpSubjctCd,		// 해당 컴포넌트
+			nameSpace : "EntEnts2147Mapper",							// 데이터를 가져올 메퍼
+			sqlId : "selectSubjctList",									// 데이터를 가져올 ID 
+			args : ["year=" + this.div_search.form.spn_year.value],		// 파라미터
+			codecolumn : "deptNo",										//
+			datacolumn : "deptNm",										//
+			promptType : "A",											// 데이터가 비었을 때 -전체- 설정
+        }, 
+
+=================================================================================
+#// DECODE를 CASE WHEN THEN으로 변환 
+=================================================================================			
+
+# 기존의 DECODE 코드 
+, MAX(DECODE(RN,1,SPORT_1_DP_SUBJCT_CD))	/*지원학과1*/
+, MAX(DECODE(RN,1,TEST_SE_CD))  			/*지원학과1_전형구분코드*/
+, MAX(DECODE(RN,1,EXMT_NO))  				/*지원학과1_수험번호*/
+, MAX(DECODE(RN,2,SPORT_1_DP_SUBJCT_CD))  	/*지원학과2*/
+, MAX(DECODE(RN,2,TEST_SE_CD))  			/*지원학과2_전형구분코드*/
+, MAX(DECODE(RN,2,EXMT_NO))  				/*지원학과2_수험번호*/
+
+
+# CASE WHEN THEN으로 변환한 코드 
+, MAX(CASE WHEN RN = 1 THEN SPORT_1_DP_SUBJCT_CD END)  /*지원학과1*/
+, MAX(CASE WHEN RN = 1 THEN TEST_SE_CD END)            /*지원학과1_전형구분코드*/
+, MAX(CASE WHEN RN = 1 THEN EXMT_NO END)               /*지원학과1_수험번호*/
+, MAX(CASE WHEN RN = 2 THEN SPORT_1_DP_SUBJCT_CD END)  /*지원학과2*/
+, MAX(CASE WHEN RN = 2 THEN TEST_SE_CD END)            /*지원학과2_전형구분코드*/
+, MAX(CASE WHEN RN = 2 THEN EXMT_NO END)               /*지원학과2_수험번호*/
