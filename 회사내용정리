@@ -1241,3 +1241,102 @@ UPDATE  TH_GYOG_L=CTRE_ACTPLN_TCHMTR
 , MAX(CASE WHEN RN = 2 THEN SPORT_1_DP_SUBJCT_CD END)  /*지원학과2*/
 , MAX(CASE WHEN RN = 2 THEN TEST_SE_CD END)            /*지원학과2_전형구분코드*/
 , MAX(CASE WHEN RN = 2 THEN EXMT_NO END)               /*지원학과2_수험번호*/
+
+
+=================================================================================
+#// SQL 함수 분석 
+=================================================================================
+
+create or replace NONEDITIONABLE FUNCTION         UF_ENTS_REGT_STTUS
+(
+   P_GUBUN   VARCHAR2  /*1:둥록구분  2:등록일자*/
+	,P_YEAR    VARCHAR2  /*입시년도*/
+	,P_EXMT_NO VARCHAR2   /*수헙번호*/
+	
+)
+RETURN VARCHAR2
+
+IS
+    V_RESULT       	VARCHAR2(100);
+    V_REGT_SE_CD    VARCHAR2(10);
+    V_FPY_AT        VARCHAR2(1);
+
+BEGIN
+V_RESULT:= '';
+
+IF  P_GUBUN = '1'  THEN
+		SELECT REGT_SE_CD
+		INTO  V_RESULT
+		FROM  CNTUEDU.VA_TI_REGT_TRGTER
+
+		WHERE YEAR = P_YEAR
+		AND EXMT_NO = P_EXMT_NO
+	
+		;
+ELSE
+     IF   P_GUBUN = '2'  THEN
+			  	SELECT PAY_DE
+					INTO  V_RESULT
+					FROM  CNTUEDU.VA_TI_REGT_TRGTER
+
+					WHERE YEAR = P_YEAR
+					AND EXMT_NO = P_EXMT_NO
+				
+					;
+
+     END IF;
+
+END IF;
+
+
+ RETURN (V_RESULT);
+
+END;
+
+
+=================================================================================
+#// 회사 css 에서 빨강색  
+=================================================================================
+ > 'color02' 
+
+=================================================================================
+#// HAK_GYOG_3060_M00 교과목CQI보고서 복사 버튼
+=================================================================================
+
+
+	if(UserSession.$.sclpstCd === "1030200" || UserSession.$.managerAt == "Y"){	//직원(담당자)
+		var buttons = [
+			// execFunc 정의가 없을 경우 "fn_" + id 값으로 함수 연결
+			{
+				id : "copy01",
+				text : "전년도복사",
+				cssClass : "btn_WF_common_save",
+				execFunc : "fn_process01"
+			},
+			{
+				id : "copy02",
+				text : "유사자료복사",
+				cssClass : "btn_WF_common_save",
+				execFunc : "fn_process02"
+			}
+			,{
+				id : "copy03",
+				text : "분반복사",
+				cssClass : "btn_WF_common_save",
+				execFunc : "fn_process03"
+			}
+		];
+		this.gfn_commonButtonMapping(buttons);
+	}
+	else{	//교원
+		var buttons = [
+			{
+				id : "copy03",
+				text : "분반복사",
+				cssClass : "btn_WF_common_save",
+				execFunc : "fn_process03"
+			}
+		];
+		this.gfn_commonButtonMapping(buttons);
+	}
+};  
