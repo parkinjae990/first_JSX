@@ -1340,3 +1340,88 @@ END;
 		this.gfn_commonButtonMapping(buttons);
 	}
 };  
+
+
+=================================================================================
+#// HAK_SPTP_1015_M00 업체참여신청,  undefined로 나오는 값 N으로 변경 후 ,해결하는 방법
+=================================================================================
+# 기존에 발생했던 문제점 
+1.	조회 후 행 클릭했을 때, fv_comptAt가 체크 되어있지 않는 경우, undefined로 설정 되어있음
+2.	학기 컴포넌트의 값 변경시, 그리드의 데이터가 조회가되나, 체크박스의 값이 N이 아닌 undefined
+3.	 fv_comptAt값을 Y로 바꾼 뒤 저장하면, 기존의 undefined 값을 가지는 다른 행의 컴포넌트들도 readonly가 걸려있음 
+4.	체크 후 , 저장하고, 다시 체크를 해제하기 위해 ,기존에 체크를 통해  tab_main.Tabpage1.form.div_main.form.chk_comptAt을 'Y'로 변경하면, 이후 다시 수정할 수 없음
+
+
+// 1. 행 변경 시 (조회 직후 또는 그리드 클릭 시)
+this.ds_list_onrowposchanged = function(obj:nexacro.NormalDataset,e:nexacro.DSRowPosChangeEventInfo)
+{
+    // B. 현재 행의 신청여부 값 가져오기
+    var fv_comptAt = obj.getColumn(obj.rowposition, "comptAt");
+    
+    // C. 값 보정 (NULL, undefined, 빈값 -> "N"으로 변환) - [문제 1, 2 해결]
+    if (GFN.isNull(fv_comptAt)) {
+        fv_comptAt = "N";
+    }
+
+    // D. 화면 컴포넌트 제어 함수 호출 
+    this.fn_setComponentStatus(fv_comptAt);
+
+    // E. 탭 조회
+    if(this.tab_main.tabindex == 1){
+        this.tab_main.tabpages[this.tab_main.tabindex].form.fn_search();
+    }
+};
+
+// 2. 컬럼 값 변경 시 (체크박스 클릭 즉시 반응)
+this.ds_list_oncolumnchanged = function(obj:nexacro.NormalDataset,e:nexacro.DSColChangeEventInfo)
+{
+    // 신청여부(comptAt) 컬럼이 변경되었을 때만 동작
+    if (e.columnid == "comptAt") {
+        
+        var sVal = e.newvalue;
+        if (GFN.isNull(sVal)){
+		sVal = "N";
+		} 
+        
+        // 화면 컴포넌트 제어 함수 호출
+        this.fn_setComponentStatus(sVal);
+    }
+};
+
+// 컴포넌트 잠금 해제, 설정 함수 
+this.fn_setComponentStatus = function(sComptAt)
+{
+    var oDiv = this.tab_main.Tabpage1.form.div_main.form;
+    
+    // 신청 상태가 'Y'이면 true(잠금), 아니면 false(해제) - [문제 3 해결]
+    // else if 없이 boolean으로 처리하여 undefined 상태에서도 확실하게 제어됨
+    var isReadOnly = (sComptAt == "Y");
+
+    // 1. [일반 항목] 신청 여부에 따라 잠금/해제
+    oDiv.edt_bcncKorNm.set_readonly(isReadOnly);        // 기관명
+    oDiv.cal_reqstDe.set_readonly(isReadOnly);          // 신청일자
+    oDiv.cal_prcticeBeginDe.set_readonly(isReadOnly);   // 실습시작일
+    oDiv.cal_prcticeEndDe.set_readonly(isReadOnly);     // 실습종료일
+    oDiv.edt_prcticeDeptNm.set_readonly(isReadOnly);    // 실습학과
+    oDiv.edt_prcticeNmpr.set_readonly(isReadOnly);      // 실습인원
+    oDiv.edt_prcticeNmpr20.set_readonly(isReadOnly);
+    oDiv.chk_comptAt20.set_readonly(isReadOnly);        // 동의여부
+    oDiv.edt_prcticeSprmny.set_readonly(isReadOnly);    // 실습비
+    oDiv.edt_rm.set_readonly(isReadOnly);               // 비고
+    oDiv.edt_chargerNm.set_readonly(isReadOnly);        // 담당자명
+    oDiv.edt_ofcps.set_readonly(isReadOnly);            // 직위
+    oDiv.edt_dept.set_readonly(isReadOnly);             // 부서
+    oDiv.edt_telno.set_readonly(isReadOnly);            // 전화번호
+    oDiv.edt_mbtlnum.set_readonly(isReadOnly);          // 휴대폰
+    oDiv.edt_fxnum.set_readonly(isReadOnly);            // 팩스
+    oDiv.edt_email.set_readonly(isReadOnly);            // 이메일
+    oDiv.edt_bankNm.set_readonly(isReadOnly);           // 은행명
+    oDiv.edt_acnutno.set_readonly(isReadOnly);          // 계좌번호
+    oDiv.edt_dpstr.set_readonly(isReadOnly);            // 예금주
+    oDiv.rad_indvdlAgreAt.set_readonly(isReadOnly);     // 동의라디오
+
+    // 2. [예외 항목] 신청 체크박스 (항상 수정 가능해야 함) - [문제 4 해결]
+    // 신청 상태가 되어도 다시 풀 수 있어야 하므로(chk_comptAt) 얘는 항상 readonly false여야 함.
+    oDiv.chk_comptAt.set_readonly(false); 
+};
+
