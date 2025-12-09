@@ -1425,3 +1425,50 @@ this.fn_setComponentStatus = function(sComptAt)
     oDiv.chk_comptAt.set_readonly(false); 
 };
 
+=================================================================================
+#// 공통버튼과 같은 위치에 버튼 생성하는 방법 및 동작시키는 스크립트
+=================================================================================
+보험요청 , 보험요청취소 버튼
+	
+	var buttons = [
+		{
+			id : "insrnRequest",
+			text : "보험요청"
+		},
+		{
+			id : "insrnCancel",
+			text : "보험요청취소"
+		},		
+	];		
+	this.gfn_commonButtonMapping(buttons);		
+	
+};
+
+
+// 보험요청 공통버튼
+this.fn_insrnRequest = function(){
+	
+	let chkCnt = this.gfn_getFilterRowsCount(this.ds_list, {rowCheck : 1});
+	
+	if(chkCnt === 0){
+		return this.gfn_alertMsg("체크목록");
+	}
+	
+	this.gfn_eachCheckedRows(this.ds_list, function(ds, row, dataMap){
+		ds.setColumn(row, "insrncRequstDe", this.ds_in.getColumn(0, "insrncRequstDe"));
+	});
+};
+
+// 보험요청취소 공통버튼
+this.fn_insrnCancel = function(){
+	
+	let chkCnt = this.gfn_getFilterRowsCount(this.ds_list, {rowCheck : 1});
+	
+	if(chkCnt === 0){
+		return this.gfn_alertMsg("체크목록");
+	}
+	
+	this.gfn_eachCheckedRows(this.ds_list, function(ds, row, dataMap){
+		ds.setColumn(row, "insrncRequstDe", "");
+	});
+};
