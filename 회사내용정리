@@ -1472,3 +1472,298 @@ this.fn_insrnCancel = function(){
 		ds.setColumn(row, "insrncRequstDe", "");
 	});
 };
+=================================================================================
+#// 그리드에 줄바꿈 적용 
+=================================================================================
+
+해당하는 셀 클릭 후 wordWrap char로 설정
+
+
+=================================================================================
+#// 테이블에 학기가 없지만, 조회조건에 학기가 존재하여, SELECT 문의 WHERE 절에 적용해서 조회해야할 때 
+=================================================================================
+
+# 1) AND , OR 절을 이용 
+<if test="grdtnSemstrCd != null and grdtnSemstrCd != '' ">
+         AND (
+		      (#{grdtnSemstrCd} = '2895100' AND SUBSTR(A.GRDTN_DE, 5, 2) = '02')		 -- 검색조건이 전기(2895100)일 경우 졸업월이 '02'인 데이터 조회
+		      OR 
+		      (#{grdtnSemstrCd} = '2895200' AND SUBSTR(A.GRDTN_DE, 5, 2) = '08')		 -- 검색조건이 후기(2895200)일 경우 졸업월이 '08'인 데이터 조회
+       		 )																		
+		</if>
+
+# 2) CASE WHEN THEN을 사용한 경우 
+<if test="grdtnSemstrCd != null and grdtnSemstrCd != '' ">
+		AND SUBSTR(A.GRDTN_DE, 5, 2) = (CASE WHEN #{grdtnSemstrCd} = '2895100' THEN '02'
+                                     		WHEN #{grdtnSemstrCd} = '2895200' THEN '08' 
+                                     	ELSE '' END)
+</if>
+
+
+=================================================================================
+#// 시간표 조회 쿼리 
+=================================================================================
+
+
+ SELECT AA.CODE_ABRV_K AS TIME
+             , MAX(BB.MON_SBJT) AS MON_SBJT
+             , MAX(BB.TUE_SBJT) AS TUE_SBJT
+             , MAX(BB.WED_SBJT) AS WED_SBJT
+             , MAX(BB.THU_SBJT) AS THU_SBJT
+             , MAX(BB.FRI_SBJT) AS FRI_SBJT
+             , MAX(BB.SAT_SBJT) AS SAT_SBJT
+             , MAX(BB.SUN_SBJT) AS SUN_SBJT
+             
+             , MAX(BB.MON_PROFSR) AS MON_PROFSR
+             , MAX(BB.TUE_PROFSR) AS TUE_PROFSR
+             , MAX(BB.WED_PROFSR) AS WED_PROFSR
+             , MAX(BB.THU_PROFSR) AS THU_PROFSR
+             , MAX(BB.FRI_PROFSR) AS FRI_PROFSR
+             , MAX(BB.SAT_PROFSR) AS SAT_PROFSR
+             , MAX(BB.SUN_PROFSR) AS SUN_PROFSR
+             
+             , MAX(BB.MON_DEPT) AS MON_DEPT
+             , MAX(BB.TUE_DEPT) AS TUE_DEPT
+             , MAX(BB.WED_DEPT) AS WED_DEPT
+             , MAX(BB.THU_DEPT) AS THU_DEPT
+             , MAX(BB.FRI_DEPT) AS FRI_DEPT
+             , MAX(BB.SAT_DEPT) AS SAT_DEPT
+             , MAX(BB.SUN_DEPT) AS SUN_DEPT
+             
+             , MAX(BB.MON_CLSS) AS MON_CLSS
+             , MAX(BB.TUE_CLSS) AS TUE_CLSS
+             , MAX(BB.WED_CLSS) AS WED_CLSS
+             , MAX(BB.THU_CLSS) AS THU_CLSS
+             , MAX(BB.FRI_CLSS) AS FRI_CLSS
+             , MAX(BB.SAT_CLSS) AS SAT_CLSS
+             , MAX(BB.SUN_CLSS) AS SUN_CLSS             
+        FROM (
+                SELECT A.UCODE
+                     , A.CODE_ABRV_K
+                FROM TC_CODE_CMMN_CD_DETAIL A
+                WHERE A.CODE_ID = '2750'    -- 교시코드
+            ) AA
+            LEFT JOIN 
+            	(
+                 SELECT A.DGHT_SE_CD
+                 , CASE 
+	                    WHEN (A.TIME_FR + B.LV - 1) &lt;= 9 			-- 계산된 교시가 9 교시 이하일 때 
+	                    THEN '275010' || (A.TIME_FR + B.LV - 1)					-- 주간 코드 
+	                    ELSE '275020' || ((A.TIME_FR + B.LV - 1) - 9)			-- 야간 코드 
+	                 END AS JOIN_DGHT_SE_CD
+                     , CASE WHEN A.WEEK_CD = '1590100' THEN A.SBJECT_CD_NM END AS MON_SBJT
+                     , CASE WHEN A.WEEK_CD = '1590200' THEN A.SBJECT_CD_NM END AS TUE_SBJT
+                     , CASE WHEN A.WEEK_CD = '1590300' THEN A.SBJECT_CD_NM END AS WED_SBJT
+                     , CASE WHEN A.WEEK_CD = '1590400' THEN A.SBJECT_CD_NM END AS THU_SBJT
+                     , CASE WHEN A.WEEK_CD = '1590500' THEN A.SBJECT_CD_NM END AS FRI_SBJT
+                     , CASE WHEN A.WEEK_CD = '1590600' THEN A.SBJECT_CD_NM END AS SAT_SBJT
+                     , CASE WHEN A.WEEK_CD = '1590700' THEN A.SBJECT_CD_NM END AS SUN_SBJT
+                     
+                     , CASE WHEN A.WEEK_CD = '1590100' THEN A.CHRG_PROFSR_NM END AS MON_PROFSR
+                     , CASE WHEN A.WEEK_CD = '1590200' THEN A.CHRG_PROFSR_NM END AS TUE_PROFSR
+                     , CASE WHEN A.WEEK_CD = '1590300' THEN A.CHRG_PROFSR_NM END AS WED_PROFSR
+                     , CASE WHEN A.WEEK_CD = '1590400' THEN A.CHRG_PROFSR_NM END AS THU_PROFSR
+                     , CASE WHEN A.WEEK_CD = '1590500' THEN A.CHRG_PROFSR_NM END AS FRI_PROFSR
+                     , CASE WHEN A.WEEK_CD = '1590600' THEN A.CHRG_PROFSR_NM END AS SAT_PROFSR
+                     , CASE WHEN A.WEEK_CD = '1590700' THEN A.CHRG_PROFSR_NM END AS SUN_PROFSR
+                     
+                     , CASE WHEN A.WEEK_CD = '1590100' THEN A.DEPT_NO_NM END AS MON_DEPT
+                     , CASE WHEN A.WEEK_CD = '1590200' THEN A.DEPT_NO_NM END AS TUE_DEPT
+                     , CASE WHEN A.WEEK_CD = '1590300' THEN A.DEPT_NO_NM END AS WED_DEPT
+                     , CASE WHEN A.WEEK_CD = '1590400' THEN A.DEPT_NO_NM END AS THU_DEPT
+                     , CASE WHEN A.WEEK_CD = '1590500' THEN A.DEPT_NO_NM END AS FRI_DEPT
+                     , CASE WHEN A.WEEK_CD = '1590600' THEN A.DEPT_NO_NM END AS SAT_DEPT
+                     , CASE WHEN A.WEEK_CD = '1590700' THEN A.DEPT_NO_NM END AS SUN_DEPT
+                     
+                     , CASE WHEN A.WEEK_CD = '1590100' THEN A.GRADE_CLSS_NM END AS MON_CLSS
+                     , CASE WHEN A.WEEK_CD = '1590200' THEN A.GRADE_CLSS_NM END AS TUE_CLSS
+                     , CASE WHEN A.WEEK_CD = '1590300' THEN A.GRADE_CLSS_NM END AS WED_CLSS
+                     , CASE WHEN A.WEEK_CD = '1590400' THEN A.GRADE_CLSS_NM END AS THU_CLSS
+                     , CASE WHEN A.WEEK_CD = '1590500' THEN A.GRADE_CLSS_NM END AS FRI_CLSS
+                     , CASE WHEN A.WEEK_CD = '1590600' THEN A.GRADE_CLSS_NM END AS SAT_CLSS
+                     , CASE WHEN A.WEEK_CD = '1590700' THEN A.GRADE_CLSS_NM END AS SUN_CLSS
+                FROM (
+                        SELECT A.DEPT_NO																	 	-- 학과코드
+                             , NVL(UF_HAK_DEPT_MAJOR_GET(A.DEPT_NO), UF_CMM_DEPTNM(A.DEPT_NO)) AS DEPT_NO_NM 	-- 학과명
+                             , A.SBJECT_CD																		-- 과목코드			
+                             , UF_GYOG_SBJECT_NM_GET(A.SBJECT_CD) AS SBJECT_CD_NM								-- 과목명
+                             , A.GRADE_CD	                                                                    -- 학년(2170)
+                             , A.CLSS		                                                                    -- 분반
+                             , UF_CMM_UCODENM(A.GRADE_CD) || ' ' || A.CLSS || '반' AS GRADE_CLSS_NM
+                             , A.CHRG_PROFSR																	-- 담당교수
+                             , UF_CMM_USERNM_EMPNO(A.CHRG_PROFSR) AS CHRG_PROFSR_NM
+                             , A.DGHT_SE_CD		                                                                -- 주야구분(1330)
+                             , A.TIME_FR		                                                                -- 시간(시작)
+                             , A.TIME_TO		                                                                -- 시간(종료)
+                             , A.TIME_TO - A.TIME_FR + 1 AS TIME_LV												-- 수업 시간
+                             , A.WEEK_CD																		-- 요일(1590)
+                        FROM (SELECT * FROM TH_SUUP_ESTBL_LCTRE_TIME											/*개설강좌시간표*/
+						      UNION ALL              
+						      SELECT * FROM TH_SUUP_ESTBL_LCTRE_REMOTE) A										/*개설강좌시간표(원격수업)*/
+                        WHERE A.YEAR = #{year}
+                          AND A.SEMSTR_CD = #{semstrCd}
+                          AND A.BULD_CD = #{buldCd}
+                          AND A.LCTRUM_CD = #{lctrumCd}
+                    ) A
+                   , (
+                   		-- 강의가 진행되는 시간을 교시로 표현하기 위해서 사용하는 쿼리 
+                        SELECT LEVEL AS LV
+                        FROM DUAL
+                        CONNECT BY LEVEL &lt;= 9
+                    ) B
+                WHERE B.LV BETWEEN 1 AND A.TIME_LV
+            ) BB
+            ON AA.UCODE = BB.JOIN_DGHT_SE_CD
+        WHERE 1=1
+        GROUP BY AA.CODE_ABRV_K
+        ORDER BY TO_NUMBER(AA.CODE_ABRV_K) ASC -- CODE_ABRV_K가 문자열 타입이기에,  숫자로 잠시 변환 후 오름차순을 적용한다.
+
+
+#   아래의 로직이 의미하는 내용을 알아야함 
+					, CASE 
+	                    WHEN (A.TIME_FR + B.LV - 1) &lt;= 9 			-- 계산된 교시가 9 교시 이하일 때 
+	                    THEN '275010' || (A.TIME_FR + B.LV - 1)					-- 주간 코드 
+	                  ELSE '275020' || ((A.TIME_FR + B.LV - 1) - 9)			-- 야간 코드 
+
+
+
+
+=================================================================================
+#// 넥사크로에서 필터 코드 
+=================================================================================
+# setCode에서 학기 설정할 때, 필터를 걸 수 있음 
+
+this.fn_setCode = function() {
+	// 공통 콤보
+	var codeMappings = [
+		{ // 조회조건 > 학기
+			objComp     : this.div_search.form.cmb_semstrCd,
+			codeId      : "2180",
+			filterCodes : ["2180300", "2180400"],
+			promptType  : ""
+		},
+	];
+	this.gfn_commonCodeMapping(codeMappings);
+			
+};	
+위의 코드를 통해서, 학기 컴포넌트에 , 2180300,2180400에 해당하는 값만 넣을 수 있다. 
+
+=================================================================================
+#// 계절학기 강사료 생성의 일괄생성 쿼리 
+=================================================================================
+# PL/SQL 구문을 해석하고, 이해해야함
+
+
+    <!-- 일괄 생성 -->
+	<insert id="collectiveGeneration">
+		BEGIN
+		
+		DELETE FROM TH_SUUP_LCTRE_CHRGE_SEASON
+		WHERE YEAR = #{year}
+			AND SEMSTR_CD = #{semstrCd}
+		;
+		
+		INSERT INTO TH_SUUP_LCTRE_CHRGE_SEASON(
+			 YEAR
+			,SEMSTR_CD
+			,CHRG_PROFSR_EMPNO
+			,SBJECT_CD
+			,ATNLC_BAN
+			,PNT
+			,TIME_LCTRE_CHRGE
+			,INSTRCTRFEE
+			,CLSF_CD		
+			,TCHER_SE_CD
+			,LCTRE_TIME
+			,INSTRCTRFEE_SE_CD
+			,JBGP_CD
+			,RSPOFC_CD
+			,INP_ID
+			,INP_DT
+			,INP_IP
+			,INP_PRGM
+		)	
+		SELECT YEAR
+		    ,SEMSTR_CD
+		    ,CHRG_PROFSR_EMPNO
+		    ,SBJECT_CD
+		    ,ATNLC_BAN
+		    ,PNT
+		    ,TIME_LCTRE_CHRGE
+		    ,PNT * TIME_LCTRE_CHRGE * LCTRE_TIME			-- 강사료 계산 
+		    ,CLSF_CD
+		    ,TCHER_SE_CD
+		    ,LCTRE_TIME
+		    ,INSTRCTRFEE_SE_CD    		--강사료구분(2185)
+		    ,JBGP_CD
+		    ,RSPOFC_CD
+		    ,#{_userSession_.loginId}
+			,SYSDATE
+			,#{_userSession_.connectIp}
+			,#{_program_.prgmUrl}
+		FROM 
+		    (SELECT A.YEAR
+		          , A.SEMSTR_CD
+		          , A.CHRG_PROFSR_NO AS CHRG_PROFSR_EMPNO
+		          , A.SBJECT_CD
+		          , A.ATNLC_BAN
+		          , A.PNT
+		          , CASE WHEN NVL(B.CNT, 0) <![CDATA[<=]]> #{cnt1} THEN TO_NUMBER(#{amt1})
+		               WHEN NVL(B.CNT, 0) <![CDATA[>=]]> #{cnt2} AND NVL(B.CNT, 0) <![CDATA[<=]]> #{cnt22} THEN TO_NUMBER(#{amt2})
+		               WHEN NVL(B.CNT, 0) <![CDATA[>=]]> #{cnt3} THEN TO_NUMBER(#{amt3})
+		               ELSE 0
+		            END AS TIME_LCTRE_CHRGE
+		          , C.CLSF_CD
+		          , CASE WHEN C.JBGP_CD = '1031102' THEN '2830101'			--전임교원
+		           	WHEN C.JBGP_CD IN ('1031103', '1031104') THEN '2830102'	--겸임,초빙교원
+		           	WHEN C.JBGP_CD = '1031105' THEN '2830103'				--강사
+		           	WHEN C.JBGP_CD = '1031108' THEN '2830104'				--명예교수
+		            END AS TCHER_SE_CD
+		          , #{lctreTime} AS LCTRE_TIME
+		          ,  CASE WHEN C.JBGP_CD = '1031102' THEN '2185010'
+		               WHEN C.JBGP_CD IN ('1031103', '1031104') THEN '2185020'
+		               WHEN C.JBGP_CD = '1031105' THEN '2185030' 
+		             END AS INSTRCTRFEE_SE_CD
+		          , C.JBGP_CD
+		          , C.APPNT_CD AS RSPOFC_CD
+		          
+		    FROM TH_SUUP_ESTBL_LCTRE A
+		    LEFT OUTER JOIN (SELECT YEAR
+		                        ,SEMSTR_CD
+		                        ,SBJECT_CD
+		                        ,NVL(CRCLM_DEPT_NO, '210500') AS CRCLM_DEPT_NO
+		                        ,NVL(CRCLM_GRADE_CD, '2170000') AS CRCLM_GRADE_CD
+		                        ,CRCLM_ATNLC_BAN
+		                        ,COUNT(STDNO) AS CNT
+		                     FROM TH_SUGA_ATNLC_REQST
+		                     WHERE (WTHDRAW_STTUS_CD != '2300103' OR WTHDRAW_STTUS_CD IS NULL)	-- 철회처리상태
+	                     		AND NVL(USE_AT, 'Y') != 'N'       -- 사용여부
+		                     GROUP BY YEAR
+		                        ,SEMSTR_CD
+		                        ,SBJECT_CD
+		                        ,NVL(CRCLM_DEPT_NO, '210500')
+		                        ,NVL(CRCLM_GRADE_CD, '2170000')
+		                        ,CRCLM_ATNLC_BAN
+		                    ) B
+		    ON A.YEAR = B.YEAR
+		    AND A.SEMSTR_CD = B.SEMSTR_CD
+		    AND A.SBJECT_CD = B.SBJECT_CD
+		    AND A.DEPT_NO = B.CRCLM_DEPT_NO
+		    AND A.CRCLM_GRADE_CD = B.CRCLM_GRADE_CD
+		    AND A.ATNLC_BAN = B.CRCLM_ATNLC_BAN
+		    
+		    INNER JOIN TA_PSNL_M C
+		    ON A.CHRG_PROFSR_NO = C.EMPNO
+		    
+		    WHERE A.YEAR = #{year}
+	        	AND A.SEMSTR_CD = #{semstrCd}
+	        	
+	        	--2024.09.02 현장실습 제외
+	        	AND NVL(A.SPT_PRCTICE_AT, 'N') != 'Y'		--현장실습 여부
+		    )
+		   ;
+	   
+
+		END;
+	</insert>
+	
