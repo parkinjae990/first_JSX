@@ -1,0 +1,156 @@
+    SELECT 
+    /* [1] 교과개요 및 과정 정보 (기준 데이터) */
+           B.YEAR                                                    -- 년도
+         , B.SEMSTR_CD                                               -- 학기      
+         , B.DEPT_NO                                                 -- 학과      
+         , B.SBJECT_CD                                               -- 과목코드
+         , B.ATNLC_BAN                                               -- 분반
+         , A.CRCLM_TY_CD                                             -- 교과유형코드(2591)
+         , UF_CMM_UCODENM(A.CRCLM_TY_CD) AS CRCLM_TY_NM              -- 교과유형명
+         , A.COMPL_CRSE_CD                                           -- 이수과정코드(2592)
+         , UF_CMM_UCODENM(A.COMPL_CRSE_CD) AS COMPL_CRSE_NM          -- 이수과정명
+         , A.CRCLM_LEVEL_CD                                          -- 교과수준코드(2593)
+         , UF_CMM_UCODENM(A.CRCLM_LEVEL_CD) AS CRCLM_LEVEL_NM        -- 
+         , A.COMPL_SE_CD                                             -- 이수구분코드(2590)
+         , UF_CMM_UCODENM(A.COMPL_SE_CD) AS COMPL_SE_NM              -- 
+         , B.BEFORE_COMPL_ESSNTL                                     -- 필수교과
+         , B.BEFORE_COMPL_RELATE                                     -- 관련교과
+         , B.BEFORE_COMPL_AT                                         -- 선수과목여부
+         , A.CRCLM_SUMRY                                             -- 교과개요
+         /* [2] 핵심역량 비율 (서브쿼리 조인 결과) */
+         , NVL(F.SCORE_CREATIVITY, 0)      AS SCORE_CREATIVITY       -- 창의
+         , NVL(F.SCORE_CONVERGENCE, 0)     AS SCORE_CONVERGENCE      -- 융합
+         , NVL(F.SCORE_CHARACTER, 0)       AS SCORE_CHARACTER        -- 인성
+         , NVL(F.SCORE_SELF_MANAGEMENT, 0) AS SCORE_SELF_MANAGEMENT  -- 자기관리
+         , NVL(F.SCORE_KNOWLEDGE_INF, 0)   AS SCORE_KNOWLEDGE_INF    -- 지식정보
+         , NVL(F.SCORE_GLOBAL, 0)          AS SCORE_GLOBAL           -- 글로벌
+         , F.NONE_CHECK                                              -- 역량 점수 존재 여부
+         /* [3] 수업계획 */
+	  , C.IMPRVM_PLAN            -- 수업개선방향
+	  , C.PRVYY_EVL_SCORE        -- 전년도 강의평가 점수
+	  , C.PRVYY_EVL_SCORE_AT     -- 전년도 강의평가 점수 해당 여부
+	  , C.SDYTRN_PRCUSE_PLAN     -- 교수법 연수/연구 활용 계획
+	  , C.LRN_MTH_01             -- 역량연계 수업방법 01
+	  , C.LRN_MTH_02             -- 역량연계 수업방법 02
+	  , C.LRN_MTH_03             -- 역량연계 수업방법 03
+	  , C.LRN_MTH_04             -- 역량연계 수업방법 04
+	  , C.LRN_MTH_05             -- 역량연계 수업방법 05
+	  , C.LRN_MTH_06             -- 역량연계 수업방법 06
+	  , C.LRN_MTH_07             -- 역량연계 수업방법 07
+	  , C.LRN_MTH_08             -- 역량연계 수업방법 08
+	  , C.LRN_MTH_09             -- 역량연계 수업방법 09
+	  , C.LRN_MTH_10             -- 역량연계 수업방법 10
+	  , C.LRN_MTH_11             -- 역량연계 수업방법 11
+	  , C.LRN_MTH_12             -- 역량연계 수업방법 12
+	  , C.LRN_MTH_13             -- 역량연계 수업방법 13
+	  , C.LRN_MTH_ETC            -- 역량연계 수업방법 기타
+	  , C.TASK_PLAN              -- 과제 및 수업안내
+	  , C.USE_MHRML_01           -- 활용 기자재 01
+	  , C.USE_MHRML_02           -- 활용 기자재 02
+	  , C.USE_MHRML_03           -- 활용 기자재 03
+	  , C.USE_MHRML_04           -- 활용 기자재 04
+	  , C.USE_MHRML_ETC          -- 활용 기자재 기타
+         /* [4] 학업성취평가 */
+         , D.EVL_MTH_AT_01                             -- 평가방법 01(Y/N)
+	  , D.EVL_MTH_AT_02                             -- 평가방법 02(Y/N)
+	  , D.EVL_MTH_AT_03                             -- 평가방법 03(Y/N)
+	  , D.EVL_MTH_AT_04                             -- 평가방법 04(Y/N)
+	  , D.EVL_MTH_AT_05                             -- 평가방법 05(Y/N)
+	  , D.EVL_MTH_ETC                               -- 평가방법 기타
+         , NVL(D.SCORE_RATE_01, 0) AS SCORE_RATE_01    -- 점수반영비율 01
+         , NVL(D.SCORE_RATE_02, 0) AS SCORE_RATE_02    -- 점수반영비율 02
+	  , NVL(D.SCORE_RATE_03, 0) AS SCORE_RATE_03    -- 점수반영비율 03
+	  , NVL(D.SCORE_RATE_04, 0) AS SCORE_RATE_04    -- 점수반영비율 04
+	  , NVL(D.SCORE_RATE_05, 0) AS SCORE_RATE_05    -- 점수반영비율 05
+	  , (  NVL(D.SCORE_RATE_01, 0)                   
+            + NVL(D.SCORE_RATE_02, 0)                   
+            + NVL(D.SCORE_RATE_03, 0)                   
+            + NVL(D.SCORE_RATE_04, 0)                   
+            + NVL(D.SCORE_RATE_05, 0)                   
+           ) AS TOTAL                                  -- 점수반영비율 합계
+         /* [5] 장애학생지원 */
+         , E.SPORT_ACT
+    FROM TH_GYOG_CRCLM_TABLE A                         /* 교과과정표 */
+    INNER JOIN TH_GYOG_LCTRE_ACTPLN_SUMRY B            /* 강의계획서 교과개요*/
+            ON A.CRCLM_YEAR      = B.YEAR
+           AND A.CRCLM_SEMSTR_CD = B.SEMSTR_CD
+           AND A.CRCLM_DEPT_NO   = B.DEPT_NO
+           AND A.SBJECT_CD       = B.SBJECT_CD
+
+    /* [2] 핵심역량 조인 (1:N 관계이므로 PIVOT 처리된 서브쿼리와 조인) */
+    LEFT JOIN (
+                SELECT T.EDC_CRSE_YEAR
+                    , T.EDC_CRSE_DEPT_NO
+                    , T.EDC_CRSE_GRADE_CD
+                    , T.EDC_CRSE_SEMSTR_CD
+                    , T.SBJECT_CD
+                    , SUM(CASE WHEN NM.CORE_ABILITY_NM = '창의' THEN T.ABILITY_SCORE ELSE 0 END) AS SCORE_CREATIVITY
+                    , SUM(CASE WHEN NM.CORE_ABILITY_NM = '융합' THEN T.ABILITY_SCORE ELSE 0 END) AS SCORE_CONVERGENCE
+                    , SUM(CASE WHEN NM.CORE_ABILITY_NM = '인성' THEN T.ABILITY_SCORE ELSE 0 END) AS SCORE_CHARACTER
+                    , SUM(CASE WHEN NM.CORE_ABILITY_NM = '자기관리' THEN T.ABILITY_SCORE ELSE 0 END) AS SCORE_SELF_MANAGEMENT
+                    , SUM(CASE WHEN NM.CORE_ABILITY_NM = '지식정보활용' THEN T.ABILITY_SCORE ELSE 0 END) AS SCORE_KNOWLEDGE_INF
+                    , SUM(CASE WHEN NM.CORE_ABILITY_NM = '글로벌' THEN T.ABILITY_SCORE ELSE 0 END) AS SCORE_GLOBAL
+                    , CASE WHEN NVL(SUM(T.ABILITY_SCORE), 0) = 0 THEN '1' ELSE '0' END AS NONE_CHECK
+                FROM TH_GYOG_DEPT_CORE_ABILITY T
+                LEFT JOIN TB_ADEV_CORE_ABILITY NM
+                       ON T.EDC_CRSE_YEAR = NM.YEAR
+                      AND T.CORE_ABILITY_CD = NM.CORE_ABILITY_CD
+                WHERE T.ABILITY_SE_CD = '5180100' -- 핵심역량만
+                GROUP BY T.EDC_CRSE_YEAR, T.EDC_CRSE_DEPT_NO, T.EDC_CRSE_GRADE_CD, T.EDC_CRSE_SEMSTR_CD, T.SBJECT_CD
+              ) F 
+           ON F.EDC_CRSE_YEAR      = A.CRCLM_YEAR
+          AND F.EDC_CRSE_DEPT_NO   = A.CRCLM_DEPT_NO
+          AND F.EDC_CRSE_GRADE_CD  = A.CRCLM_GRADE_CD
+          AND F.EDC_CRSE_SEMSTR_CD = A.CRCLM_SEMSTR_CD
+          AND F.SBJECT_CD          = A.SBJECT_CD
+
+    /* [3] 수업계획 조인 (1:1, 데이터 없을 수 있음 -> LEFT JOIN) */
+    LEFT JOIN TH_GYOG_LCTRE_ACTPLN_LESSON_PLAN C
+           ON B.YEAR      = C.YEAR
+          AND B.SEMSTR_CD = C.SEMSTR_CD
+          AND B.DEPT_NO   = C.DEPT_NO
+          AND B.SBJECT_CD = C.SBJECT_CD
+          AND B.ATNLC_BAN = C.ATNLC_BAN
+
+    /* [4] 학업성취평가 조인 (1:1, 데이터 없을 수 있음 -> LEFT JOIN) */
+    LEFT JOIN TH_GYOG_LCTRE_ACTPLN_EVL D
+           ON B.YEAR      = D.YEAR
+          AND B.SEMSTR_CD = D.SEMSTR_CD
+          AND B.DEPT_NO   = D.DEPT_NO
+          AND B.SBJECT_CD = D.SBJECT_CD
+          AND B.ATNLC_BAN = D.ATNLC_BAN
+
+    /* [5] 장애학생지원 조인 (1:1, 데이터 없을 수 있음 -> LEFT JOIN) */
+    LEFT JOIN TH_GYOG_LCTRE_ACTPLN_DSPSN_STDNT E
+           ON B.YEAR      = E.YEAR
+          AND B.SEMSTR_CD = E.SEMSTR_CD
+          AND B.DEPT_NO   = E.DEPT_NO
+          AND B.SBJECT_CD = E.SBJECT_CD
+          AND B.ATNLC_BAN = E.ATNLC_BAN
+
+    WHERE 1=1
+  /* 공통 파라미터 필터링 */
+      AND B.ATNLC_BAN       = #{atnlcBan}
+      AND A.CRCLM_YEAR      = #{year}
+      AND A.CRCLM_SEMSTR_CD = #{semstrCd}
+      AND A.CRCLM_DEPT_NO   = #{deptNo}
+      AND A.SBJECT_CD       = #{sbjectCd}
+  /*
+    where 조건의 강의 계획서 테스트 데이터 
+  		AND B.ATNLC_BAN = '2'
+	    
+	   AND A.CRCLM_YEAR = '2025'
+	    
+	    
+	   AND A.CRCLM_SEMSTR_CD = '2180100'
+	    
+	    
+	   AND A.CRCLM_DEPT_NO = '210110'
+	    
+	    
+	   AND A.CRCLM_GRADE_CD = '2170100'
+	    
+	    
+	   AND A.SBJECT_CD = '00379'
+  
+  */
