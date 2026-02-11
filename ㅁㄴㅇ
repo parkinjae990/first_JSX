@@ -1,110 +1,66 @@
-// 3. 등록정보 
-// =================================================================================================
-// ▶ include 선언부
-// =================================================================================================
-include "Lib::comInclude.xjs"; // 공통 라이브러리
-// =================================================================================================
-// ▶ 폼 전역변수 선언부
-// =================================================================================================
-this.lv_parentObj     = this.gfn_getParentForm();      // 부모정보
-this.lv_stdno         = "";                            // 부모학번
-// =================================================================================================
-// ▶ Form Event Handler
-// =================================================================================================
-
-this.form_onload = function (obj:Form, e:nexacro.LoadEventInfo) {
-
-	// Form Load 시 공통 기능 처리
-	this.gfn_formOnLoad(obj);
-	
-};
-
-// =================================================================================================
-// ▶ 공통버튼 Event Handler
-// =================================================================================================
-/**
- * 검색 처리
- * @return
- */
-this.fn_search = function () {
-	//main화면에서 학번가져오기
-	this.lv_stdno = this.lv_parentObj.ds_list.getColumn(this.lv_parentObj.ds_list.rowposition,"stdno");
-	
-	var oData = {
-		sController : ComService.$.CONTROLLER,
-		svcid : "search",
-		svcList : [
-			{
-				action	  : ComService.$.SEARCH,
-				nameSpace : "HakHakj2010T06Mapper",
-				sqlId	  : "selectListS01",
-				outds	  : "ds_list", 
-				args      : ["stdno=" + this.lv_stdno]
-			}
-		]
-	};
-	ComService.doAction(this, oData).then(function(form ,e) {
-		
- 	});
-};
-
-// =================================================================================================
-// ▶ 사용자 정의 Function
-// =================================================================================================
-
-
-//4. 학적변동
-
-// =================================================================================================
-// ▶ include 선언부
-// =================================================================================================
-include "Lib::comInclude.xjs"; // 공통 라이브러리
-// =================================================================================================
-// ▶ 폼 전역변수 선언부
-// =================================================================================================
-this.lv_parentObj     = this.gfn_getParentForm();      // 부모정보
-this.lv_stdno         = "";                            // 부모학번
-// =================================================================================================
-// ▶ Form Event Handler
-// =================================================================================================
-
-this.form_onload = function (obj:Form, e:nexacro.LoadEventInfo) {
-
-	// Form Load 시 공통 기능 처리
-	this.gfn_formOnLoad(obj);
-	
-};
-
-// =================================================================================================
-// ▶ 공통버튼 Event Handler
-// =================================================================================================
-/**
- * 검색 처리
- * @return
- */
-this.fn_search = function () {
-	//main화면에서 학번가져오기
-	this.lv_stdno = this.lv_parentObj.ds_list.getColumn(this.lv_parentObj.ds_list.rowposition,"stdno");
-	
-	var oData = {
-		sController : ComService.$.CONTROLLER,
-		svcid : "search",
-		svcList : [
-			{
-				action	  : ComService.$.SEARCH,
-				nameSpace : "HakHakj2010T07Mapper",
-				sqlId	  : "selectListS01",
-				outds	  : "ds_list", 
-				args      : ["stdno=" + this.lv_stdno]
-			}
-		]
-	};
-	ComService.doAction(this, oData).then(function(form ,e) {
-		
- 	});
-};
-
-// =================================================================================================
-// ▶ 사용자 정의 Function
-// =================================================================================================
-
+SELECT  A.WEEK_ODR      -- 주차
+     , A.WEEK_THEMA    -- 학습주제
+   	 , UF_CMM_UCODENM(A.LCTRE_TY_CD) AS LCTRE_TY_NM   -- 수업유형
+   	 , NVL(
+       		CASE 
+      		   WHEN A.ABILITY_SE_CD='5180100' THEN   C1.CORE_ABILITY_NM
+      		   ELSE C2.MAJOR_ABILITY_NM
+      		END, ' ') AS ABLITY_NM   -- 역량
+   	 , NVL(
+			CASE 
+				WHEN A.ABILITY_SE_CD='5180100' THEN   D1.LWPRT_ABILITY_NM
+				ELSE D2.LWPRT_ABILITY_NM
+			END, ' ') AS LWPRT_ABLITY_NM   -- 하위역량
+   	  , A.CNTC_LCTRE_MTH   -- 역량연계 수업방법
+   	  ,NVL(
+			CASE 
+				WHEN A.ABILITY_SE_CD='5180100' THEN   
+					(
+					SELECT LISTAGG(GHVR_IX_CASE, CHR(13)||CHR(10)) WITHIN GROUP (ORDER BY SN)
+					FROM TB_ADEV_CORE_ABILITY_GHVR_IDX
+					WHERE YEAR = B.CREAT_EDC_YEAR
+					AND CORE_ABILITY_CD = A.CORE_ABILITY_CD
+					AND LWPRT_ABILITY_CD = A.LWPRT_ABILITY_CD
+					AND INSTR(',' || A.ABILITY_GHVR_CHARST || ',', ',' || SN || ',') > 0
+					)
+				ELSE 
+					(
+					SELECT LISTAGG(GHVR_IX_CASE, CHR(13)||CHR(10)) WITHIN GROUP (ORDER BY SN)
+					FROM TB_ADEV_MAJOR_ABILITY_GHVR_IDX
+					WHERE YEAR = B.CREAT_EDC_YEAR
+					AND DEPT_NO = B.DEPT_NO
+					AND MAJOR_ABILITY_CD = A.CORE_ABILITY_CD
+					AND LWPRT_ABILITY_CD = A.LWPRT_ABILITY_CD
+					AND INSTR(',' || A.ABILITY_GHVR_CHARST || ',', ',' || SN || ',') > 0
+					)
+			END, ' ') AS ABILITY_GHVR   -- 행동지표
+	  , A.LRN_TCHMTR      -- 학습교재
+	  , A.LRN_PRPARE      -- 학습준비물
+	  , A.LRN_GOAL      -- 학습목표
+	  , A.LRN_CN         -- 주요 학습내용
+	FROM TH_GYOG_LCTRE_ACTPLN_WIK_LRN A   -- 주차별학습계획서
+	LEFT JOIN TH_SUUP_ESTBL_LCTRE B      -- 개설강좌
+		   ON A.YEAR = B.YEAR
+		  AND A.SEMSTR_CD = B.SEMSTR_CD 
+		  AND A.DEPT_NO = B.DEPT_NO
+		  AND A.SBJECT_CD = B.SBJECT_CD
+		  AND A.ATNLC_BAN = B.ATNLC_BAN
+	LEFT JOIN TB_ADEV_CORE_ABILITY C1   -- 역량
+		   ON C1.YEAR = B.CREAT_EDC_YEAR 
+		  AND C1.CORE_ABILITY_CD = A.CORE_ABILITY_CD
+	LEFT JOIN TB_ADEV_MAJOR_ABILITY C2
+		   ON C2.YEAR = B.CREAT_EDC_YEAR 
+		  AND C2.DEPT_NO = B.DEPT_NO
+		  AND C2.MAJOR_ABILITY_CD = A.CORE_ABILITY_CD
+	LEFT JOIN TB_ADEV_LWPRT_ABILITY D1   -- 하위역량
+		   ON D1.YEAR = B.CREAT_EDC_YEAR 
+		  AND D1.CORE_ABILITY_CD = A.CORE_ABILITY_CD
+		  AND D1.LWPRT_ABILITY_CD = A.LWPRT_ABILITY_CD
+	LEFT JOIN TB_ADEV_MAJOR_LWPRT_ABILITY D2
+		   ON D2.YEAR = B.CREAT_EDC_YEAR 
+		  AND D2.DEPT_NO = B.DEPT_NO
+		  AND D2.MAJOR_ABILITY_CD = A.CORE_ABILITY_CD
+		  AND D2.LWPRT_ABILITY_CD = A.LWPRT_ABILITY_CD
+	WHERE A.YEAR='2025' AND A.SEMSTR_CD='2180200' AND A.SBJECT_CD='00378' AND A.ATNLC_BAN='8'      -- 선택한 개설과목 정보(파라미터 처리)
+	ORDER BY A.WEEK_ODR
+;

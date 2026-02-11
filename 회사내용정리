@@ -1,9 +1,12 @@
 =================================================================================
 #//넥사크로 커밋 전 검토해야할 내용 
-
+// https://m.blog.naver.com/nsy323/222155917274	(SVN 에러 날 때 ) 
 
 # 1. 탭오더0
 # 2. trace 확인 
+# 3. 학과 좌정렬
+# 4. 숫자 우정렬
+
 # 엑셀
 =================================================================================
 
@@ -666,6 +669,10 @@ expandshow="expr:dataset.getRowType(currow) == Dataset.ROWTYPE_INSERT?'show':'hi
 # 그리드에서 추가된 행의 상태일 때만 돋보기 보이게 설정 
 dataset.getRowType(currow) == 2 ? 'show' : 'hide'
 
+# 그리드에서 추가된 expandshow의 이미지를 돋보기로 설정 
+theme://images/ico_expandP.png
+
+
 # 스크립트
 //onexpanddown > 어떤 셀을 클릭했을 때 발생하는 이벤트
 this.div_resize_grd_list20_onexpanddown = function(obj:nexacro.Grid,e:nexacro.GridMouseEventInfo)
@@ -992,20 +999,32 @@ this.fn_setCode = function()
 		},
 	];
 	this.gfn_commonCodeMapping(codeMappings, {
-		// 시,군 구분 체인콤보
-		svid : "chainCombo",
-		cfn  : "chainCombo",
-		setChain : function(form, e){
-			#//체인콤보 설정   메인 :: (메인이 될 시/도)
-			var rootChain = form.comboManager.createComboChain({
-				comp   : form.div_search.form.cmb_ctprvnCd
-			});	#// 		 서브 :: (시/도에 따라 값이 바뀌는 구/군)
-			var subChain = rootChain.setNext({
-				comp   : form.div_search.form.cmb_guGunCd,
-				filter : "pre.ucode==extraCode1"
-			}); 
+        svid : "chainCombo",
+        cfn  : "chainCombo",
+        setChain : function(form, e){
+            //1. 조회조건(Search Div) 체인 설정
+            var rootChainSearch = form.comboManager.createComboChain({
+                comp : form.div_search.form.cmb_ctprvnCd,
+            });
+            var subChainSearch = rootChainSearch.setNext({
+                comp   : form.div_search.form.cmb_guGunCd,
+                filter : "pre.ucode==extraCode1" // 1560코드(시도)의 '코드값'과 1570코드(시군구)의 '보조코드1(extraCode1)'을 매핑 
+            }); 
+            // 2. 그리드(Grid) 체인 설정 colNm을 추가
+            var rootChainGrid = form.comboManager.createComboChain({
+                comp   : form.grd_list,
+                colNm  : "ctprvnCd",	//1560
+            }); 
+            var subChainGrid = rootChainGrid.setNext({
+                comp   : form.grd_list,
+                colNm  : "guGunCd",		//1570
+                // 1560코드(시도)의 '코드값'과 1570코드(시군구)의 '보조코드1(extraCode1)'을 매핑 
+                filter : "pre.ucode==extraCode1" 
+            }); 
 		}
-		}, function(){
+	},	
+	function(){
+		this.fn_searchGuGun();
 	});	
 };
 
@@ -1828,3 +1847,109 @@ tabPage에서, preload 설정을 true로 설정하면 된다.
 부모의 화면의 탭을 선택한 후 preload 설정을 true로 설정한다면, 부모 화면이 로드될 때, 자동으로 
 부모 탭의 자식페이지들까지 자동으로 만들기에 , 탭페이지 이동시 데이터가 자동으로 조회되어 나온다. 
 위의 설정을 적용하지 않으면, 처음 페이지 이동시 데이터가 로드되지 않고, 다시 이동해야 데이터가 로드가 된다. 
+
+
+
+=================================================================================
+#// 그리드 내부에 첨부파일 버튼 생성 후 로직 설정 
+=================================================================================
+
+// 파일 업로드
+this.grd_list_oncellclick = function(obj:nexacro.Grid,e:nexacro.GridClickEventInfo)
+{
+	if(e.cell == 6){
+		var atchmnfl = this.ds_list.getColumn(this.ds_list.rowposition, "atchmnfl"); // 첨부파일ID
+		var uploadId = atchmnfl;
+		var storgeCd = this.storgeCd;	//저장소 
+		
+		this.gfn_filePopup(storgeCd, uploadId, function(svcid, variant) {
+			if(GFN.isEmpty(atchmnfl)){
+				if(variant.fileCount > 0){			
+					var uploadId = variant.uploadId;
+					this.ds_list.set_updatecontrol(false);
+					this.ds_list.setColumn(this.ds_list.rowposition, "atchmnfl", uploadId);
+					// PK값 가져와야함 
+					var year   = this.ds_list.getColumn(this.ds_list.rowposition, "year");
+					var deptNo = this.ds_list.getColumn(this.ds_list.rowposition, "deptNo");
+					var useDe  = this.ds_list.getColumn(this.ds_list.rowposition, "useDe");
+					var prctCd = this.ds_list.getColumn(this.ds_list.rowposition, "prctCd");
+					
+					// 첨부파일 수정 함수 
+					this.fn_updateAtchmnfl(year, deptNo, useDe, prctCd ,uploadId );
+					
+					this.ds_list.set_updatecontrol(true);	// set_updatecontrol > Dataset의 자동 RowType 변경 기능을 제어
+				}
+			}else{
+				this.ds_list.set_updatecontrol(false);
+				
+				if(variant.fileCount > 0){
+						
+				}else{
+					this.ds_list.setColumn(this.ds_list.rowposition, "uploadId", "");
+					
+					var year   = this.ds_list.getColumn(this.ds_list.rowposition, "year");		// 년도
+					var deptNo = this.ds_list.getColumn(this.ds_list.rowposition, "deptNo");	// 학기
+					var useDe  = this.ds_list.getColumn(this.ds_list.rowposition, "useDe");		// 사용일자
+					var prctCd = this.ds_list.getColumn(this.ds_list.rowposition, "prctCd");	// 홍보비구분(4730)
+
+					this.fn_updateAtchmnfl(year, deptNo, useDe, prctCd, uploadId); // 빈 값으로 업데이트
+				}		
+				
+				this.ds_list.set_updatecontrol(true);
+			}	
+		})
+	}
+};
+
+//첨부파일 수정( 첨부파일 정보만 별도로 DB 업데이트)
+this.fn_updateAtchmnfl = function (year, deptNo, useDe, prctCd, uploadId){
+	this.ds_atchmnfl.clearData();
+	
+	var nRow = this.gfn_insertRow(this.ds_atchmnfl);
+	
+	this.ds_atchmnfl.setColumn(nRow, "year",     year);
+	this.ds_atchmnfl.setColumn(nRow, "deptNo",   deptNo);
+	this.ds_atchmnfl.setColumn(nRow, "useDe",    useDe);
+	this.ds_atchmnfl.setColumn(nRow, "prctCd",   prctCd);
+	this.ds_atchmnfl.setColumn(nRow, "atchmnfl", uploadId);
+	
+	var oData = {
+		sController : ComService.$.CONTROLLER,
+		svcid : "updateAtchmnfl",
+		svcList : [
+			{
+				action	  : ComService.$.SAVE,
+				nameSpace : "EntEnts1420Mapper",
+				sqlId	  : ["updateAtchmnfl", "", ""],
+				inds	  : "ds_atchmnfl",
+			}
+		]
+	};
+	ComService.doAction(this, oData).then(function(form, e) {
+		
+	});	
+	
+};
+
+
+=================================================================================
+#// 저장시, 유효성 검사 적용
+=================================================================================
+1. DB에서, 중복된 데이터 확인하는 스크립트 
+validSql  : { //저장시 키 중복조회가 필요한 경우 (return null or return 0)
+						nameSpace : "HakHakj3120Mapper",
+						sqlId	  : "selectDuplCheck",
+						value	  : "0", //유효한 값, 해당 값 외 리턴시에는 false
+						msg		  : this.gfn_getMsg("중복된 데이터가 존재합니다.")
+					}
+
+2.신규 행이 2개 이상일 때, 1)로 중복을 체크할 수 없기에 UI상에서 중복 체크 
+
+	var isDup = this.gfn_insertRowDupCheck(this.ds_list, ["stdno", "sknrgsChgCd", "sknrgsChangeDe"]);	// 키 값에 해당하는 컬럼 적용 
+	if(isDup){
+		this.gfn_alertMsg("중복된코드");
+		return;
+	}
+
+
+
