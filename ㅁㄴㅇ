@@ -1,66 +1,41 @@
-SELECT  A.WEEK_ODR      -- 주차
-     , A.WEEK_THEMA    -- 학습주제
-   	 , UF_CMM_UCODENM(A.LCTRE_TY_CD) AS LCTRE_TY_NM   -- 수업유형
-   	 , NVL(
-       		CASE 
-      		   WHEN A.ABILITY_SE_CD='5180100' THEN   C1.CORE_ABILITY_NM
-      		   ELSE C2.MAJOR_ABILITY_NM
-      		END, ' ') AS ABLITY_NM   -- 역량
-   	 , NVL(
-			CASE 
-				WHEN A.ABILITY_SE_CD='5180100' THEN   D1.LWPRT_ABILITY_NM
-				ELSE D2.LWPRT_ABILITY_NM
-			END, ' ') AS LWPRT_ABLITY_NM   -- 하위역량
-   	  , A.CNTC_LCTRE_MTH   -- 역량연계 수업방법
-   	  ,NVL(
-			CASE 
-				WHEN A.ABILITY_SE_CD='5180100' THEN   
-					(
-					SELECT LISTAGG(GHVR_IX_CASE, CHR(13)||CHR(10)) WITHIN GROUP (ORDER BY SN)
-					FROM TB_ADEV_CORE_ABILITY_GHVR_IDX
-					WHERE YEAR = B.CREAT_EDC_YEAR
-					AND CORE_ABILITY_CD = A.CORE_ABILITY_CD
-					AND LWPRT_ABILITY_CD = A.LWPRT_ABILITY_CD
-					AND INSTR(',' || A.ABILITY_GHVR_CHARST || ',', ',' || SN || ',') > 0
-					)
-				ELSE 
-					(
-					SELECT LISTAGG(GHVR_IX_CASE, CHR(13)||CHR(10)) WITHIN GROUP (ORDER BY SN)
-					FROM TB_ADEV_MAJOR_ABILITY_GHVR_IDX
-					WHERE YEAR = B.CREAT_EDC_YEAR
-					AND DEPT_NO = B.DEPT_NO
-					AND MAJOR_ABILITY_CD = A.CORE_ABILITY_CD
-					AND LWPRT_ABILITY_CD = A.LWPRT_ABILITY_CD
-					AND INSTR(',' || A.ABILITY_GHVR_CHARST || ',', ',' || SN || ',') > 0
-					)
-			END, ' ') AS ABILITY_GHVR   -- 행동지표
-	  , A.LRN_TCHMTR      -- 학습교재
-	  , A.LRN_PRPARE      -- 학습준비물
-	  , A.LRN_GOAL      -- 학습목표
-	  , A.LRN_CN         -- 주요 학습내용
-	FROM TH_GYOG_LCTRE_ACTPLN_WIK_LRN A   -- 주차별학습계획서
-	LEFT JOIN TH_SUUP_ESTBL_LCTRE B      -- 개설강좌
-		   ON A.YEAR = B.YEAR
-		  AND A.SEMSTR_CD = B.SEMSTR_CD 
-		  AND A.DEPT_NO = B.DEPT_NO
-		  AND A.SBJECT_CD = B.SBJECT_CD
-		  AND A.ATNLC_BAN = B.ATNLC_BAN
-	LEFT JOIN TB_ADEV_CORE_ABILITY C1   -- 역량
-		   ON C1.YEAR = B.CREAT_EDC_YEAR 
-		  AND C1.CORE_ABILITY_CD = A.CORE_ABILITY_CD
-	LEFT JOIN TB_ADEV_MAJOR_ABILITY C2
-		   ON C2.YEAR = B.CREAT_EDC_YEAR 
-		  AND C2.DEPT_NO = B.DEPT_NO
-		  AND C2.MAJOR_ABILITY_CD = A.CORE_ABILITY_CD
-	LEFT JOIN TB_ADEV_LWPRT_ABILITY D1   -- 하위역량
-		   ON D1.YEAR = B.CREAT_EDC_YEAR 
-		  AND D1.CORE_ABILITY_CD = A.CORE_ABILITY_CD
-		  AND D1.LWPRT_ABILITY_CD = A.LWPRT_ABILITY_CD
-	LEFT JOIN TB_ADEV_MAJOR_LWPRT_ABILITY D2
-		   ON D2.YEAR = B.CREAT_EDC_YEAR 
-		  AND D2.DEPT_NO = B.DEPT_NO
-		  AND D2.MAJOR_ABILITY_CD = A.CORE_ABILITY_CD
-		  AND D2.LWPRT_ABILITY_CD = A.LWPRT_ABILITY_CD
-	WHERE A.YEAR='2025' AND A.SEMSTR_CD='2180200' AND A.SBJECT_CD='00378' AND A.ATNLC_BAN='8'      -- 선택한 개설과목 정보(파라미터 처리)
-	ORDER BY A.WEEK_ODR
-;
+1) Immutable 클래스 
+package lang.immutable.change;
+public class ImmutableObj {
+    private final int value;
+    public ImmutableObj(int value) {
+        this.value = value;
+    }
+    public ImmutableObj add(int addValue) {
+        int result = value + addValue;
+    return new ImmutableObj(result);            // 새로운 객체를 생성해서 반환해줌
+    }
+}
+    public int getValue() {
+        return value;
+    }
+
+2) main 클래스 
+package lang.immutable.change;
+public class ImmutableMain2 {
+    public static void main(String[] args) {
+        ImmutableObj obj1 = new ImmutableObj(10); // 주소를 001로 가정
+        obj1.add(20); // add(int addValue)를 통해서, 새로운 객체(주소를 002로 가정)를 return으로 반환
+        // 그러나 해당 반환되는 객체의 주소를 참조하는 변수가 없기에, obj는 기존에 참조하던 001을 계속 참조하고 있음 
+        // 만약 obj1 = obj1.add(20)이라면, obj1은 return으로 반환되는 새로운 객체의 주소를 참조함 
+
+  
+        // 이것만으로는 obj1이 바뀌지 않음 (반환값을 무시함)
+        //obj1.add(20); 
+
+        // 이렇게 해야 obj1이 새로운 주소를 가리킴 (반환값을 대입함)
+        //obj1 = obj1.add(20);
+
+
+    }
+}
+System.out.println("obj1 = " + obj1.getValue());
+
+
+    ImmutableObj obj1 = new ImmutableObj(10);을 통해서, final로 설정된 value가 10으로 설정된 후 , add(20)을 통해서, result가 30이 되고, return을 통해 새로운 ImmutableObj(result)를 참조하여
+    obj1.getValue()를 통해 , 새로운 객체 ImmutableObj(30)의 주소를 참조한 값 30을 가져온다고 생각했는데 
+    왜 콘솔에 출력시, 30이 아닌 10인가요?
