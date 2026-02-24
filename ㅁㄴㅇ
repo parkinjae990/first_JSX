@@ -7,7 +7,7 @@ public class ImmutableObj {
     }
     public ImmutableObj add(int addValue) {
         int result = value + addValue;
-    return new ImmutableObj(result);            // 새로운 객체를 생성해서 반환해줌
+    return new ImmutableObj(result);                    // 새로운 객체를 생성해서 반환해줌
     }
 }
     public int getValue() {
@@ -18,8 +18,8 @@ public class ImmutableObj {
 package lang.immutable.change;
 public class ImmutableMain2 {
     public static void main(String[] args) {
-        ImmutableObj obj1 = new ImmutableObj(10); // 주소를 001로 가정
-        obj1.add(20); // add(int addValue)를 통해서, 새로운 객체(주소를 002로 가정)를 return으로 반환
+        ImmutableObj obj1 = new ImmutableObj(10);       // 주소를 001로 가정
+        obj1.add(20);                                   // add(int addValue)를 통해서, 새로운 객체(주소를 002로 가정)를 return으로 반환
         // 그러나 해당 반환되는 객체의 주소를 참조하는 변수가 없기에, obj는 기존에 참조하던 001을 계속 참조하고 있음 
         // 만약 obj1 = obj1.add(20)이라면, obj1은 return으로 반환되는 새로운 객체의 주소를 참조함 
 
@@ -31,9 +31,9 @@ public class ImmutableMain2 {
         //obj1 = obj1.add(20);
 
 
+        System.out.println("obj1 = " + obj1.getValue());
     }
 }
-System.out.println("obj1 = " + obj1.getValue());
 
 
     ImmutableObj obj1 = new ImmutableObj(10);을 통해서, final로 설정된 value가 10으로 설정된 후 , add(20)을 통해서, result가 30이 되고, return을 통해 새로운 ImmutableObj(result)를 참조하여
