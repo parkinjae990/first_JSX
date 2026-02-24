@@ -1964,3 +1964,11 @@ this.fn_excel = function ()
 {
 	this.tab_main.tabpages[this.tab_main.tabindex].form.fn_excel();
 };
+
+=================================================================================
+#// 화면에서, 사번/성명일 때, MyBatis의 where 조건 처리 (학번/성명인 경우 , empNo만 변경)
+=================================================================================
+
+<if test="empNo != null and empNo != ''">
+          AND (C.EMPNO = #{empNo} OR C.KOR_NM LIKE '%' || #{empNo} || '%') 
+       </if>
