@@ -1971,4 +1971,5 @@ this.fn_excel = function ()
 
 <if test="empNo != null and empNo != ''">
           AND (C.EMPNO = #{empNo} OR C.KOR_NM LIKE '%' || #{empNo} || '%') 
-       </if>
+       </if>  
+ 
