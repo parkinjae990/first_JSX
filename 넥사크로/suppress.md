@@ -16,12 +16,12 @@
 
 <h3>suppress 적용 전 </h3>
 
-![alt text](/images/image.png)
+![alt text](suppressImages/image.png)
 [그림1]
 
 
 <h3>suppress 적용 후 </h3>
 
-![alt text](/images/image-1.png)
+![alt text](suppressImages/image-1.png)
 [그림2]
 
