@@ -2001,3 +2001,120 @@ this.fn_excel = function ()
 (필요에 따라 글자를 가운데 맞춤하기 위해 suppressalign 속성을 middle,center로 줍니다.)
 6.화면을 실행해보면 쿼리 수정 없이도 마법처럼 같은 교수 이름이 하나로 합쳐져서(병합되어) 보여집니다.
 
+=================================================================================
+#// 멀티콤보(multicombo) 설정 
+=================================================================================
+# setCode의 코드매핑에서, multi : true를 통해서 멀티콤보를 설정할 수 있음 
+예시 :: 
+// 콤보 셋팅
+this.fn_setCode = function () 
+{
+	let codeMappings = [
+		{	// 고장수리품목
+			objComp : this.div_detail01.form.cmb_prdlstCd,
+			codeId : "7820",
+			promptType : "S",
+			multi	   : true,
+		},
+	];
+
+	this.gfn_commonCodeMapping(codeMappings, function(){
+
+	});
+} 
+mapper에서 사용  >> (구분자로 파라미터를 split 한 후  row로 반환 )
+<if test="">
+AND 컬럼명 IN (SELECT * FROM UF_CMM_SPLIT_TO_ROW(#{파라미터}));
+</if>
+		<if test="prdlstCds =! null and prdlstCds != ''">
+		  AND A.PRDLST_CD IN (SELECT * FROM UF_CMM_SPLIT_TO_ROW(#{prdlstCds}))
+		</if>
+		
+
+=================================================================================
+#// 가장 최신 순차의 방 번호 가져오기 (Max값 이용)
+=================================================================================
+
+(
+	SELECT ROOM_NO
+	FROM TE_BRHS_REQST_M
+	WHERE STDNO = #{_userSession_.empno}
+		AND ODR = (SELECT MAX(ODR) 
+				   FROM TE_BRHS_REQST_M 
+				   WHERE STDNO = #{_userSession_.empno})
+) AS ROOM_NO		
+
+
+=================================================================================
+#// 특정 컴포넌트 값이 바뀜에 따라 연관된 멀티콤보박스 값 세팅
+=================================================================================
+
+this.div_detail01_cmb_repairReqstCd_onitemchanged = function(obj:nexacro.Combo,e:nexacro.ItemChangeEventInfo)
+{
+	//1. 기타 일 때,
+	if(this.div_detail01.form.cmb_repairReqstCd.value == '7810200') {
+		this.div_detail01.form.cmb_prdlstCd.set_value('7820900');
+		trace(this.div_detail01.form.cmb_prdlstCd.value);
+		
+	}else if (this.div_detail01.form.cmb_repairReqstCd.value == '7810100'){
+		this.fn_setCode20();
+	}
+	//2. 값이 변화했을 때, 일자 값 오늘 날짜로 설정
+	this.div_detail01.form.cal_reqstDe.set_value(GFN.getToday());
+
+};
+
+// 멀티콤보 박스 초기화 함수
+this.fn_setCode20 = function() {
+	
+	var codeMappings = [
+			{ 	//부서
+				objComp    : this.div_detail01.form.cmb_prdlstCd,
+				nameSpace  : "HakHsrv9960Mapper",
+				sqlId      : "selectSttusCombo",
+				codecolumn : "ucode",
+				datacolumn : "codenmK",
+				promptType : "S",						
+				multi      : true
+			}
+
+	];
+	this.gfn_commonCodeMapping(codeMappings, function(){	
+		this.div_detail01.form.cmb_prdlstCd.set_value('');
+	});	
+};
+
+=================================================================================
+#// ',' 구분자로 잘라 명칭으로 변환 후  LISTAGG 사용해서 배열 생성 
+=================================================================================
+
+SELECT A.REQST_DE                          -- 신청일자
+			 , A.REPAIR_REQST_CD                   -- 고장수리신청코드(7810)
+			 , A.PRDLST_CD                         -- 품목구분코드(7820)
+			 , A.REPAIR_CN                         -- 고장수리및민원내역
+			 , A.REPAIR_RESULT                     -- 고장수리처리결과
+			 , A.REPAIR_STTUS_CD                   -- 수리진행상태(7830)
+			 , A.PROCESS_DE                        -- 처리일자
+			 , A.PRCS_EMPNO                        -- 처리자사번
+			 , A.STDNO							   -- 학번
+			 , A.ROOM_NO						   -- 호실
+			 , B.KOR_NM                            -- 처리자 성명
+			 , (SELECT (SELECT LISTAGG(UF_CMM_UCODENM(CODE), ',') 
+                    WITHIN GROUP (ORDER BY CODE)
+                      FROM (SELECT REGEXP_SUBSTR(A.PRDLST_CD, '[^,]+', 1, LEVEL) AS CODE
+                              FROM DUAL
+                           CONNECT BY REGEXP_SUBSTR(A.PRDLST_CD, '[^,]+', 1, LEVEL) IS NOT NULL
+                           )
+                   )                                                                                
+              FROM TE_BRHS_REPAIR_REQST B
+             WHERE 1=1
+               AND A.REQST_DE = B.REQST_DE
+               AND A.STDNO = B.STDNO
+               AND A.REPAIR_REQST_CD = B.REPAIR_REQST_CD
+           ) AS PRDLST_NM 
+			 
+		FROM 		TE_BRHS_REPAIR_REQST    A
+		LEFT JOIN 	TA_PSNL_M        		B
+				ON A.PRCS_EMPNO =B.EMPNO
+		WHERE 1=1
+          AND A.STDNO =#{stdno}
