@@ -2118,3 +2118,11 @@ SELECT A.REQST_DE                          -- 신청일자
 				ON A.PRCS_EMPNO =B.EMPNO
 		WHERE 1=1
           AND A.STDNO =#{stdno}
+
+
+
+=================================================================================
+#// 그리드 내부 checkbox의 edittype에 삼항연산자 조건 걸기 
+=================================================================================
+# reqstSttusCd > 진행상태  , gnotSeCd > 외출,외박 구분
+reqstSttusCd == '4300100' && (gnotSeCd == '7995300' || gnotSeCd == '7995400') ? 'checkbox' : 'none'
